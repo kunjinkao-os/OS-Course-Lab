@@ -1,0 +1,6 @@
+**
+!scripts/
+!scripts/docker/
+!scripts/docker/arm64/
+!scripts/docker/arm64/Dockerfile
+!scripts/docker/arm64/read_procmgr_elf_tool.py
