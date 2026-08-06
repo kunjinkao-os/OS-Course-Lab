@@ -14,6 +14,8 @@ pinned by digest, and the downloaded LLVM signing key is verified by SHA-256.
 The image is not a fully reproducible package snapshot: unversioned APT
 packages can resolve differently as the Ubuntu and LLVM repositories change.
 
+完整中文教程请参阅 [ARM64 Docker 与 QEMU 使用指南](docs/arm64-docker-qemu-guide.md)。
+
 ## Build and run
 
 ```sh
