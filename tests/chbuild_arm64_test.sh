@@ -50,4 +50,24 @@ if FAKE_UNAME=x86_64 "$repo_dir/chbuild" build >"$tmp_dir/out" 2>&1; then
 fi
 grep -F 'requires an ARM64 host' "$tmp_dir/out" >/dev/null
 
+cat >"$tmp_dir/sha256sum" <<'EOF'
+#!/bin/bash
+if [ "$#" -gt 0 ]; then
+    exit 7
+fi
+printf '%s  -\n' '0000000000000000000000000000000000000000000000000000000000000000'
+EOF
+chmod +x "$tmp_dir/sha256sum"
+
+: >"$DOCKER_LOG"
+if "$repo_dir/chbuild" build >"$tmp_dir/out" 2>&1; then
+    echo "hash command failure unexpectedly accepted" >&2
+    exit 1
+fi
+grep -F 'Cannot hash Docker image inputs' "$tmp_dir/out" >/dev/null
+if grep -E '^(image inspect|build |run )' "$DOCKER_LOG" >/dev/null; then
+    echo "docker execution continued after hash command failure" >&2
+    exit 1
+fi
+
 echo "chbuild ARM64 tests passed"

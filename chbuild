@@ -285,14 +285,30 @@ _update_submodules() {
 }
 
 _docker_inputs_sha256() {
+    local input_hashes digest_line
     if command -v sha256sum >/dev/null 2>&1; then
-        sha256sum "$dockerfile" "$docker_helper" | sha256sum | awk '{print $1}'
+        input_hashes=$(sha256sum "$dockerfile" "$docker_helper") || {
+            _echo_err "Cannot hash Docker image inputs" >&2
+            return 1
+        }
+        digest_line=$(sha256sum <<<"$input_hashes") || {
+            _echo_err "Cannot hash Docker image inputs" >&2
+            return 1
+        }
     elif command -v shasum >/dev/null 2>&1; then
-        shasum -a 256 "$dockerfile" "$docker_helper" | shasum -a 256 | awk '{print $1}'
+        input_hashes=$(shasum -a 256 "$dockerfile" "$docker_helper") || {
+            _echo_err "Cannot hash Docker image inputs" >&2
+            return 1
+        }
+        digest_line=$(shasum -a 256 <<<"$input_hashes") || {
+            _echo_err "Cannot hash Docker image inputs" >&2
+            return 1
+        }
     else
         _echo_err "Cannot hash Docker image inputs: install sha256sum or shasum" >&2
         return 1
     fi
+    printf '%s\n' "${digest_line%% *}"
 }
 
 _docker_image_name() {
@@ -341,7 +357,7 @@ _docker_run() {
         return
     fi
 
-    local image use_cgroup use_tty
+    local image use_cgroup
     local -a docker_args
     image=$(_prepare_docker_image) || return 1
     use_cgroup=""
