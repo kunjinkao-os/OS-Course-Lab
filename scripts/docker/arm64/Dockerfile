@@ -1,4 +1,4 @@
-FROM ubuntu:20.04
+FROM ubuntu:20.04@sha256:722ea796ac2d57eeb3627c58a582fc1acc58be51faf815e1bce1682ae5c092f7
 
 ARG TARGETARCH
 ARG USERNAME=stu
@@ -17,6 +17,10 @@ RUN apt-get update \
         wget \
     && wget -q -O /tmp/llvm-snapshot.gpg.key \
         https://apt.llvm.org/llvm-snapshot.gpg.key \
+    && printf '%s  %s\n' \
+        '8b2a587ffd672c4687e7581dad4b2f6c1bb2ad6b480cd9771ba2ff48e0b8c75d' \
+        /tmp/llvm-snapshot.gpg.key \
+        | sha256sum --check --strict - \
     && gpg --dearmor --output /usr/share/keyrings/llvm-archive-keyring.gpg \
         /tmp/llvm-snapshot.gpg.key \
     && printf '%s\n' \

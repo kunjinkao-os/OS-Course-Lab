@@ -9,7 +9,7 @@
 # PURPOSE.
 # See the Mulan PSL v2 for more details.
 
-set -e
+set -eo pipefail
 
 basedir=$(dirname "$0")
 # basedir should be /build directory
@@ -25,4 +25,4 @@ port=$(shuf -i 30000-40000 -n 1)
 echo $port >$basedir/gdb-port
 
 $basedir/../scripts/qemu/qemu_wrapper.sh \
-    @qemu@ -gdb tcp::$port @qemu_options@ | tee exec_log
+    @qemu@ -gdb tcp::$port @qemu_options@ | tee "$basedir/exec_log"

@@ -6,8 +6,13 @@
 - Docker Desktop, OrbStack, or another running Docker-compatible daemon
 
 `chbuild` creates a local `linux/arm64` toolchain image on first use. The first
-command downloads Ubuntu packages; later commands reuse the content-addressed
-image and the normal Docker build cache.
+command downloads Ubuntu packages; later commands reuse the recipe-derived
+local image tag and the normal Docker build cache. The recipe tag covers the
+ARM64 Dockerfile, the ELF helper, and `.dockerignore`. The Ubuntu ARM64 base is
+pinned by digest, and the downloaded LLVM signing key is verified by SHA-256.
+
+The image is not a fully reproducible package snapshot: unversioned APT
+packages can resolve differently as the Ubuntu and LLVM repositories change.
 
 ## Build and run
 
@@ -19,6 +24,16 @@ image and the normal Docker build cache.
 
 `./chbuild run` starts QEMU in `-nographic` mode and connects the ChCore serial
 console to the terminal. Press `Ctrl-a x` to exit QEMU.
+
+To confirm that the exact image for the current recipe is ARM64, run:
+
+```sh
+chcore_image=$(./chbuild image)
+docker run --rm --platform linux/arm64 "$chcore_image" uname -m
+```
+
+The expected output is `aarch64`. `./chbuild image` computes the current exact
+local tag; it does not select an arbitrary older `arm64-*` tag.
 
 ## Troubleshooting
 

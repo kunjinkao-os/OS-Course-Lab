@@ -37,6 +37,7 @@ docker_cgroup='/chcore_gitlab_runner/'
 docker_platform="linux/arm64"
 dockerfile="scripts/docker/arm64/Dockerfile"
 docker_helper="scripts/docker/arm64/read_procmgr_elf_tool.py"
+dockerignore=".dockerignore"
 docker_image_repository="chcore-build"
 
 RED='\033[0;31m'
@@ -204,6 +205,10 @@ run() {
     exec "$cmake_build_dir/simulate.sh"
 }
 
+image() {
+    _docker_image_name
+}
+
 clean() {
     _echo_info "Cleaning..."
 
@@ -254,6 +259,7 @@ ${BOLD}COMMANDS:${NONE}
   Local:
 
     ${BOLD}help, --help, -h${NONE}      print this help text
+    ${BOLD}image${NONE}                 print the exact recipe-derived local image name
     ${BOLD}update-submodules${NONE}     update Git submodules according to config file
 
   Local or Docker:
@@ -287,7 +293,8 @@ _update_submodules() {
 _docker_inputs_sha256() {
     local input_hashes digest_line
     if command -v sha256sum >/dev/null 2>&1; then
-        input_hashes=$(sha256sum "$dockerfile" "$docker_helper") || {
+        input_hashes=$(sha256sum \
+            "$dockerfile" "$docker_helper" "$dockerignore") || {
             _echo_err "Cannot hash Docker image inputs" >&2
             return 1
         }
@@ -296,7 +303,8 @@ _docker_inputs_sha256() {
             return 1
         }
     elif command -v shasum >/dev/null 2>&1; then
-        input_hashes=$(shasum -a 256 "$dockerfile" "$docker_helper") || {
+        input_hashes=$(shasum -a 256 \
+            "$dockerfile" "$docker_helper" "$dockerignore") || {
             _echo_err "Cannot hash Docker image inputs" >&2
             return 1
         }
@@ -338,8 +346,9 @@ _prepare_docker_image() {
         _echo_err "Docker daemon is unavailable; start Docker Desktop or OrbStack" >&2
         return 1
     }
-    [ -f "$dockerfile" ] && [ -f "$docker_helper" ] || {
-        _echo_err "Docker image inputs are missing under scripts/docker/arm64" >&2
+    [ -f "$dockerfile" ] && [ -f "$docker_helper" ] \
+        && [ -f "$dockerignore" ] || {
+        _echo_err "Docker image recipe inputs are missing" >&2
         return 1
     }
     image=$(_docker_image_name) || return 1
@@ -396,6 +405,10 @@ _main() {
         update-submodules)
             # need Git SSH key authentication, so must run in local env
             _update_submodules
+            exit
+            ;;
+        image)
+            image
             exit
             ;;
         sync)

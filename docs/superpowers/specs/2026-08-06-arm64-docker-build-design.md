@@ -19,7 +19,8 @@ QEMU configuration already generates `build/simulate.sh` with
 
 This change will:
 
-- provide a repository-owned, reproducible `linux/arm64` toolchain image;
+- provide a repository-owned `linux/arm64` toolchain image with a pinned ARM64
+  base image and a verified LLVM repository signing key;
 - make `chbuild` build and cache that image automatically;
 - preserve the existing `defconfig`, `config`, `menuconfig`, `build`, `clean`,
   and `distclean` interfaces;
@@ -36,10 +37,14 @@ fallback, or add Raspi4 QEMU support. Raspi4 builds remain available, but
 
 ### ARM64 toolchain image
 
-Add `scripts/docker/arm64/Dockerfile`, based on a pinned Ubuntu release that is
-available for `linux/arm64`. It installs the AArch64 GNU cross compiler and
-binutils, C/C++ build tools, CMake, the utilities referenced by the repository's
-build scripts, and `qemu-system-aarch64` from the distribution packages.
+Add `scripts/docker/arm64/Dockerfile`, based on the Ubuntu 20.04 ARM64 manifest
+pinned as `ubuntu:20.04@sha256:722ea796ac2d57eeb3627c58a582fc1acc58be51faf815e1bce1682ae5c092f7`.
+It installs the AArch64 GNU cross compiler and binutils, C/C++ build tools,
+CMake, the utilities referenced by the repository's build scripts, and
+`qemu-system-aarch64` from the distribution packages. The apt.llvm.org signing
+key is downloaded over HTTPS and checked against SHA-256
+`8b2a587ffd672c4687e7581dad4b2f6c1bb2ad6b480cd9771ba2ff48e0b8c75d`
+before it is converted into an APT keyring.
 
 The image is a build environment, not a copy of the source tree. The repository
 is bind-mounted at runtime so build outputs remain on the host and existing
@@ -47,12 +52,20 @@ incremental-build behavior is preserved.
 
 ### Image selection and caching
 
-`chbuild` derives a local image tag from the ARM64 Dockerfile content digest.
-Before running a container command, it checks that Docker is installed and the
-daemon is reachable, then checks for that exact image tag. If absent, it runs a
-`docker build` targeting `linux/arm64`. Docker layer caching makes rebuilds
-incremental, while the content-derived tag prevents silently reusing an image
-created from an older Dockerfile.
+`chbuild` derives a local image tag from the content of three repository-owned
+recipe inputs: `scripts/docker/arm64/Dockerfile`,
+`scripts/docker/arm64/read_procmgr_elf_tool.py`, and `.dockerignore`. Before
+running a container command, it checks that Docker is installed and the daemon
+is reachable, then checks for that exact recipe-derived tag. If absent, it runs
+a `docker build` targeting `linux/arm64`. Docker layer caching makes rebuilds
+incremental, while the tag prevents silently reusing an image created from an
+older version of any of those inputs.
+
+This is a local recipe cache tag, not a content address for the built image.
+Ubuntu and LLVM APT package versions and repository metadata are not pinned to
+immutable snapshots, so a clean build of an unchanged recipe can resolve newer
+package content under the same tag. Fully reproducible package resolution is
+explicitly outside this change's scope.
 
 The runtime invocation explicitly selects `--platform linux/arm64`, bind-mounts
 the repository at the same absolute path, uses the repository as the working
@@ -81,10 +94,10 @@ The user exits QEMU with `Ctrl-a x`.
 
 ### Dev-container
 
-`.devcontainer/Dockerfile` will reuse the ARM64 toolchain Dockerfile rather
-than `ipads/oslab:24.09`. The dev-container configuration will explicitly target
-`linux/arm64`, keeping VS Code and command-line builds on the same dependency
-set.
+`.devcontainer/devcontainer.json` will reference the canonical ARM64 toolchain
+Dockerfile rather than an `ipads/oslab:24.09` wrapper. The dev-container
+configuration will explicitly target `linux/arm64`, keeping VS Code and
+command-line builds on the same dependency set.
 
 ## Error Handling
 
@@ -98,23 +111,26 @@ set.
 - `.config` is missing or selects an unsupported platform for `run`; or
 - `build/simulate.sh` is missing because the project has not been built.
 
-Container and QEMU exit statuses propagate to the caller. Existing `exec_log`
-and `gdb-port` files remain in `build/` because the generated simulation script
-continues to own those behaviors.
+Container and QEMU exit statuses propagate to the caller. The generated QEMU
+script enables Bash `pipefail` so its logging pipeline returns a QEMU wrapper
+failure, and writes both `exec_log` and `gdb-port` in `build/`. The generated
+simulation script continues to own these behaviors and all QEMU arguments.
 
 ## Documentation
 
 The README will state that this path targets Apple Silicon and requires a
 running Docker Desktop, OrbStack, or compatible Docker daemon. It will document
-the three-command build-and-run flow, the one-time image build, image cache
-behavior, `Ctrl-a x`, and the diagnostic command for confirming that the
-container reports `aarch64`.
+the three-command build-and-run flow, the one-time image build, recipe-derived
+local cache behavior and its APT-resolution limitation, `Ctrl-a x`, and a
+diagnostic based on `./chbuild image` for confirming that the exact current
+recipe image reports `aarch64`.
 
 ## Verification
 
 Static verification consists of:
 
 - parsing `chbuild` with `bash -n`;
+- running the focused recipe-tag and QEMU failure-path shell tests;
 - checking that `./chbuild --help` documents `run` and ARM64 behavior; and
 - reviewing the generated Docker build command for an explicit
   `linux/arm64` platform.
@@ -122,13 +138,13 @@ Static verification consists of:
 Dynamic verification, with a running Docker daemon, consists of:
 
 1. Building the toolchain image from a clean local image state.
-2. Running `uname -m` in the image and requiring `aarch64`.
+2. Resolving the image with `chcore_image=$(./chbuild image)`, running
+   `uname -m` in that exact image, and requiring `aarch64`.
 3. Running `./chbuild defconfig raspi3`.
 4. Running a complete `./chbuild build` and requiring a successful exit.
 5. Running `./chbuild run`, confirming the QEMU command uses `-nographic`, and
    observing ChCore initialization output on the terminal.
 6. Exiting QEMU with `Ctrl-a x` and confirming control returns to the host.
 
-The current workstation has Docker CLI 29.4.0, but its OrbStack Docker daemon
-is not running. Code and static checks can be completed without it; dynamic
-verification requires starting Docker Desktop or OrbStack.
+Dynamic verification requires a running Docker Desktop, OrbStack, or compatible
+daemon. Static checks remain available when the daemon is stopped.

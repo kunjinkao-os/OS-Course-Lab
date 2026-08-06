@@ -28,7 +28,59 @@ export PATH="$tmp_dir:$real_path"
 
 help_output=$("$repo_dir/chbuild" --help)
 grep -F 'run' <<<"$help_output" >/dev/null
+grep -F 'image' <<<"$help_output" >/dev/null
 grep -F 'linux/arm64' <<<"$help_output" >/dev/null
+
+: >"$DOCKER_LOG"
+image_name=$("$repo_dir/chbuild" image)
+if [[ ! "$image_name" =~ ^chcore-build:arm64-[0-9a-f]{12}$ ]]; then
+    echo "unexpected image name: $image_name" >&2
+    exit 1
+fi
+if [ -s "$DOCKER_LOG" ]; then
+    echo "image command unexpectedly contacted Docker" >&2
+    exit 1
+fi
+
+hash_fixture="$tmp_dir/hash-fixture"
+mkdir -p "$hash_fixture/scripts/docker/arm64"
+cp "$repo_dir/chbuild" "$hash_fixture/chbuild"
+cp "$repo_dir/.dockerignore" "$hash_fixture/.dockerignore"
+cp "$repo_dir/scripts/docker/arm64/Dockerfile" \
+    "$hash_fixture/scripts/docker/arm64/Dockerfile"
+cp "$repo_dir/scripts/docker/arm64/read_procmgr_elf_tool.py" \
+    "$hash_fixture/scripts/docker/arm64/read_procmgr_elf_tool.py"
+
+for input in \
+    .dockerignore \
+    scripts/docker/arm64/Dockerfile \
+    scripts/docker/arm64/read_procmgr_elf_tool.py; do
+    before=$(cd "$hash_fixture" && ./chbuild image)
+    printf '\n# tag-input regression marker\n' >>"$hash_fixture/$input"
+    after=$(cd "$hash_fixture" && ./chbuild image)
+    if [ "$before" = "$after" ]; then
+        echo "$input did not affect the recipe-derived image tag" >&2
+        exit 1
+    fi
+    cp "$repo_dir/$input" "$hash_fixture/$input"
+done
+
+sha256_path=$(command -v sha256sum || true)
+shasum_path=$(command -v shasum || true)
+awk_path=$(command -v awk)
+if [ -n "$sha256_path" ] && [ -n "$shasum_path" ]; then
+    mkdir "$tmp_dir/gnu-hash" "$tmp_dir/macos-hash"
+    ln -s "$sha256_path" "$tmp_dir/gnu-hash/sha256sum"
+    ln -s "$awk_path" "$tmp_dir/gnu-hash/awk"
+    ln -s "$shasum_path" "$tmp_dir/macos-hash/shasum"
+    ln -s "$awk_path" "$tmp_dir/macos-hash/awk"
+    gnu_name=$(PATH="$tmp_dir/gnu-hash" "$repo_dir/chbuild" image)
+    macos_name=$(PATH="$tmp_dir/macos-hash" "$repo_dir/chbuild" image)
+    if [ "$gnu_name" != "$macos_name" ]; then
+        echo "GNU and macOS hash tools produced different image names" >&2
+        exit 1
+    fi
+fi
 
 : >"$DOCKER_LOG"
 "$repo_dir/chbuild" build
@@ -69,5 +121,12 @@ if grep -E '^(image inspect|build |run )' "$DOCKER_LOG" >/dev/null; then
     echo "docker execution continued after hash command failure" >&2
     exit 1
 fi
+
+grep -F \
+    'FROM ubuntu:20.04@sha256:722ea796ac2d57eeb3627c58a582fc1acc58be51faf815e1bce1682ae5c092f7' \
+    scripts/docker/arm64/Dockerfile >/dev/null
+grep -F \
+    "8b2a587ffd672c4687e7581dad4b2f6c1bb2ad6b480cd9771ba2ff48e0b8c75d" \
+    scripts/docker/arm64/Dockerfile >/dev/null
 
 echo "chbuild ARM64 tests passed"
