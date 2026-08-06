@@ -1,22 +1,36 @@
 # IPADS ChCore MicroKernel Repository
 
-## Prerequisities(build with docker)
+## Prerequisites (Apple Silicon)
 
-* docker
+- An Apple Silicon Mac (`arm64`)
+- Docker Desktop, OrbStack, or another running Docker-compatible daemon
 
-## Build
+`chbuild` creates a local `linux/arm64` toolchain image on first use. The first
+command downloads Ubuntu packages; later commands reuse the content-addressed
+image and the normal Docker build cache.
 
-Generate build config files:
+## Build and run
 
-```shell
-./chbuild defconfig raspi3 # raspi3 can be changed to other platforms (options: raspi3 raspi4)
-```
-
-Build according to `.config`:
-
-```shell
+```sh
+./chbuild defconfig raspi3
 ./chbuild build
+./chbuild run
 ```
+
+`./chbuild run` starts QEMU in `-nographic` mode and connects the ChCore serial
+console to the terminal. Press `Ctrl-a x` to exit QEMU.
+
+## Troubleshooting
+
+- If Docker reports that it cannot connect to the daemon, start Docker Desktop,
+  OrbStack, or your Docker-compatible daemon, then rerun the command.
+- This workflow requires an `arm64` host. On a non-ARM host, use a supported
+  ARM64 environment before running `chbuild`.
+- If `build/simulate.sh` is missing, first run `./chbuild defconfig raspi3` and
+  `./chbuild build`; use `./chbuild run` rather than invoking the simulator
+  directly.
+
+## Additional `chbuild` commands
 
 Clean and rebuild all:
 
@@ -29,12 +43,6 @@ Full usage of `chbuild` script:
 
 ```shell
 ./chbuild --help
-```
-
-## Run in QEMU
-
-```shell
-./build/simulate.sh
 ```
 
 ## Coding Style
