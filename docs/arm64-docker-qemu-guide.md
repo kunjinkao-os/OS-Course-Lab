@@ -49,7 +49,7 @@ docker run --rm --platform linux/arm64 "$chcore_image" uname -m
 ./chbuild build
 ```
 
-该命令需要 `.config`；若提示缺少它，请回到第 2 节执行 `./chbuild defconfig raspi3`。构建成功后会生成内核镜像和 QEMU 启动脚本。
+该命令需要 `.config`；若提示缺少它，请回到第 2 节执行 `./chbuild defconfig raspi3`。配置/构建流程会生成 QEMU 启动脚本；完整构建会生成可启动的内核镜像。
 
 ## 4. 使用 QEMU 启动
 
@@ -88,7 +88,7 @@ docker run --rm --platform linux/arm64 "$chcore_image" uname -m
 ## 6. 构建产物与日志
 
 - `build/kernel.img`：供 Raspi3 QEMU 加载的内核镜像。
-- `build/simulate.sh`：构建生成的 QEMU 启动脚本；日常请通过 `./chbuild run` 调用它。
+- `build/simulate.sh`：由配置/构建流程生成的 QEMU 启动脚本；日常请通过 `./chbuild run` 调用它。
 - `build/exec_log`：QEMU 串口输出的日志，便于回看启动信息和故障。
 - `build/gdb-port`：每次启动时写入的 QEMU GDB 调试端口。
 
@@ -99,10 +99,11 @@ docker run --rm --platform linux/arm64 "$chcore_image" uname -m
 - 缺少 `.config`：先运行 `./chbuild defconfig raspi3`，再运行构建或启动命令。
 - 缺少 `build/simulate.sh`：先执行 `./chbuild build`；之后通过 `./chbuild run` 启动，而不是直接执行该脚本。
 - 旧构建状态：运行 `./chbuild distclean` 删除构建目录与 `.config`，然后重新执行 `./chbuild defconfig raspi3` 和 `./chbuild build`。
-- 需要强制重建 recipe 镜像：先精确解析当前标签，只删除该标签，再重新配置；不要按通配符删除其他镜像。
+- 需要强制重建 recipe 镜像：先保存精确的当前标签。随后 `distclean` 会删除旧的 `build/` 与 `.config`，使 `defconfig` 可以重新配置；再只删除该标签，最后重新配置。不要按通配符删除其他镜像。
 
   ```bash
   chcore_image=$(./chbuild image)
+  ./chbuild distclean
   docker image rm "$chcore_image"
   ./chbuild defconfig raspi3
   ```
