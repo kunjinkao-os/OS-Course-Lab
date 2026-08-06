@@ -29,7 +29,7 @@ RUN apt-get update \
         patch \
         pkg-config \
         python3 \
-        python3-elftools \
+        python3-pyelftools \
         qemu-system-arm \
         sudo \
     && rm -rf /var/lib/apt/lists/*

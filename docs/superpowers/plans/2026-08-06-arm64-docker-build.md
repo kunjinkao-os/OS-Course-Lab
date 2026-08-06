@@ -172,7 +172,7 @@ RUN apt-get update \
         patch \
         pkg-config \
         python3 \
-        python3-elftools \
+        python3-pyelftools \
         qemu-system-arm \
         sudo \
     && rm -rf /var/lib/apt/lists/*
@@ -209,7 +209,7 @@ Create a root `.dockerignore` that allows only the two ARM64 image inputs throug
 Then run:
 
 ```sh
-rg -n '^FROM ubuntu:20\.04$|TARGETARCH|python3-elftools|qemu-system-arm|gcc-aarch64-linux-gnu' scripts/docker/arm64/Dockerfile
+rg -n '^FROM ubuntu:20\.04$|TARGETARCH|python3-pyelftools|qemu-system-arm|gcc-aarch64-linux-gnu' scripts/docker/arm64/Dockerfile
 ```
 
 Expected: each required base/platform/tool dependency is present.
