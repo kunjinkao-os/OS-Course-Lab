@@ -37,6 +37,7 @@
 - Create: `.dockerignore`
 - Create: `scripts/docker/arm64/Dockerfile`
 - Create: `scripts/docker/arm64/read_procmgr_elf_tool.py`
+- Create: `tests/read_procmgr_elf_tool_test.py`
 
 **Interfaces:**
 - Consumes: repository-root Docker build context and Docker automatic `TARGETARCH` argument.
@@ -67,6 +68,9 @@ def fail(message: str) -> NoReturn:
 def numeric_program_type(value) -> int:
     if isinstance(value, int):
         return value
+    mapped_value = ENUM_P_TYPE_BASE.get(value)
+    if isinstance(mapped_value, int):
+        return mapped_value
     for number, name in ENUM_P_TYPE_BASE.items():
         if isinstance(number, int) and name == value:
             return number
@@ -135,6 +139,22 @@ python3 -c 'import ast, pathlib; ast.parse(pathlib.Path("scripts/docker/arm64/re
 ```
 
 Expected: exit status 0 and no output. This check does not import pyelftools, so it is valid on the macOS host.
+
+- [ ] **Step 2a: Verify both pyelftools enum directions without pyelftools installed**
+
+Create `tests/read_procmgr_elf_tool_test.py`. Load the helper through
+`importlib` while stubbing its `elftools` imports in `sys.modules`, then verify
+that `numeric_program_type()` accepts an integer value, a string-to-integer
+enum mapping (the Ubuntu Focal pyelftools 0.26 representation), and an
+integer-to-string mapping. Verify an unknown string exits through `fail()`.
+
+Run:
+
+```sh
+python3 -m unittest discover -s tests -p 'read_procmgr_elf_tool_test.py'
+```
+
+Expected: four tests pass without requiring pyelftools on the host.
 
 - [ ] **Step 3: Add the ARM64 Dockerfile**
 
@@ -558,6 +578,7 @@ Run:
 bash -n chbuild
 bash tests/chbuild_arm64_test.sh
 python3 -c 'import ast, pathlib; ast.parse(pathlib.Path("scripts/docker/arm64/read_procmgr_elf_tool.py").read_text())'
+python3 -m unittest discover -s tests -p 'read_procmgr_elf_tool_test.py'
 python3 -m json.tool .devcontainer/devcontainer.json >/dev/null
 git diff --check
 ```

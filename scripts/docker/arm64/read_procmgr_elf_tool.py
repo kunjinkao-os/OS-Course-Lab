@@ -18,6 +18,9 @@ def fail(message: str) -> NoReturn:
 def numeric_program_type(value) -> int:
     if isinstance(value, int):
         return value
+    mapped_value = ENUM_P_TYPE_BASE.get(value)
+    if isinstance(mapped_value, int):
+        return mapped_value
     for number, name in ENUM_P_TYPE_BASE.items():
         if isinstance(number, int) and name == value:
             return number
