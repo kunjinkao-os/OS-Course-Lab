@@ -4,9 +4,9 @@
 
 **Goal:** Build ChCore in a native `linux/arm64` container on Apple Silicon and boot the Raspi3 result through an interactive, headless QEMU session using `./chbuild run`.
 
-**Architecture:** A repository-owned Ubuntu 20.04 ARM64 image supplies the GCC 9 AArch64 cross toolchain, CMake, QEMU, and a compatible implementation of the image-only `read_procmgr_elf_tool`. `chbuild` content-addresses the Dockerfile and helper script, builds the image on first use, and runs every existing build command plus the new `run` command in the cached image. The generated `build/simulate.sh` remains the sole owner of QEMU machine arguments.
+**Architecture:** A repository-owned Ubuntu 20.04 ARM64 image supplies the GCC 9 AArch64 cross toolchain, CMake, Clang-Tidy 16, QEMU, and a compatible implementation of the image-only `read_procmgr_elf_tool`. `chbuild` content-addresses the Dockerfile and helper script, builds the image on first use, and runs every existing build command plus the new `run` command in the cached image. The generated `build/simulate.sh` remains the sole owner of QEMU machine arguments.
 
-**Tech Stack:** Bash 3.2-compatible shell, Docker/BuildKit, Ubuntu 20.04 ARM64, GCC 9 AArch64 cross compiler, CMake 3.16, Python 3 with pyelftools, QEMU system emulator.
+**Tech Stack:** Bash 3.2-compatible shell, Docker/BuildKit, Ubuntu 20.04 ARM64, GCC 9 AArch64 cross compiler, CMake 3.16, Clang-Tidy 16 from apt.llvm.org, Python 3 with pyelftools, QEMU system emulator.
 
 ## Global Constraints
 
@@ -40,7 +40,7 @@
 
 **Interfaces:**
 - Consumes: repository-root Docker build context and Docker automatic `TARGETARCH` argument.
-- Produces: an ARM64 image containing `aarch64-linux-gnu-gcc`, `cmake`, `ccmake`, `cpio`, `clang-tidy`, `read_procmgr_elf_tool`, and `qemu-system-aarch64` on `PATH`; user `stu` for dev-container use.
+- Produces: an ARM64 image containing `aarch64-linux-gnu-gcc`, `cmake`, `ccmake`, `cpio`, Clang-Tidy 16 as `clang-tidy`, `read_procmgr_elf_tool`, and `qemu-system-aarch64` on `PATH`; user `stu` for dev-container use.
 
 - [ ] **Step 1: Add the metadata-tool implementation test fixture behavior to the script**
 
@@ -155,10 +155,24 @@ RUN test "${TARGETARCH}" = "arm64"
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
+        ca-certificates \
+        gnupg \
+        wget \
+    && wget -q -O /tmp/llvm-snapshot.gpg.key \
+        https://apt.llvm.org/llvm-snapshot.gpg.key \
+    && gpg --dearmor --output /usr/share/keyrings/llvm-archive-keyring.gpg \
+        /tmp/llvm-snapshot.gpg.key \
+    && printf '%s\n' \
+        'deb [signed-by=/usr/share/keyrings/llvm-archive-keyring.gpg] http://apt.llvm.org/focal/ llvm-toolchain-focal-16 main' \
+        > /etc/apt/sources.list.d/llvm-16.list \
+    && rm /tmp/llvm-snapshot.gpg.key \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
         bash \
         binutils-aarch64-linux-gnu \
-        ca-certificates \
-        clang-tidy \
+        clang-tidy-16 \
         cmake \
         cmake-curses-gui \
         cpio \
@@ -181,6 +195,7 @@ COPY scripts/docker/arm64/read_procmgr_elf_tool.py \
     /usr/local/bin/read_procmgr_elf_tool
 
 RUN chmod 0755 /usr/local/bin/read_procmgr_elf_tool \
+    && ln -s /usr/bin/clang-tidy-16 /usr/local/bin/clang-tidy \
     && ln -s /usr/bin/make /usr/local/bin/gmake \
     && groupadd --gid "${USER_GID}" "${USERNAME}" \
     && useradd --uid "${USER_UID}" --gid "${USER_GID}" \
@@ -191,7 +206,7 @@ RUN chmod 0755 /usr/local/bin/read_procmgr_elf_tool \
 CMD ["/bin/bash"]
 ```
 
-Ubuntu 20.04 is deliberate: it matches the upstream `ipads/oslab:24.09` base and provides GCC 9.3 and CMake 3.16 on ARM64. Distribution QEMU is sufficient because `scripts/qemu/qemu_wrapper.sh` already translates `raspi3b` to the older `raspi3` machine name for QEMU versions below 6.2.
+Ubuntu 20.04 is deliberate: it matches the upstream `ipads/oslab:24.09` base and provides GCC 9.3 and CMake 3.16 on ARM64. Clang-Tidy 16 comes from the signed apt.llvm.org Focal repository because the distro's Clang-Tidy 10 does not support the project's `--config-file` option. Distribution QEMU is sufficient because `scripts/qemu/qemu_wrapper.sh` already translates `raspi3b` to the older `raspi3` machine name for QEMU versions below 6.2.
 
 - [ ] **Step 4: Run static Dockerfile checks**
 
@@ -209,7 +224,7 @@ Create a root `.dockerignore` that allows only the two ARM64 image inputs throug
 Then run:
 
 ```sh
-rg -n '^FROM ubuntu:20\.04$|TARGETARCH|python3-pyelftools|qemu-system-arm|gcc-aarch64-linux-gnu' scripts/docker/arm64/Dockerfile
+rg -n '^FROM ubuntu:20\.04$|TARGETARCH|apt\.llvm\.org/focal|llvm-toolchain-focal-16|clang-tidy-16|python3-pyelftools|qemu-system-arm|gcc-aarch64-linux-gnu' scripts/docker/arm64/Dockerfile
 ```
 
 Expected: each required base/platform/tool dependency is present.
@@ -578,10 +593,10 @@ chcore_image=$(docker image ls 'chcore-build:arm64-*' \
   --format '{{.Repository}}:{{.Tag}}' | head -n 1)
 test -n "$chcore_image"
 docker run --rm --platform linux/arm64 "$chcore_image" sh -c \
-  'test "$(uname -m)" = aarch64 && command -v aarch64-linux-gnu-gcc && command -v read_procmgr_elf_tool && command -v qemu-system-aarch64'
+  'test "$(uname -m)" = aarch64 && command -v aarch64-linux-gnu-gcc && command -v clang-tidy && clang-tidy --version | grep -F "LLVM version 16." && command -v read_procmgr_elf_tool && command -v qemu-system-aarch64'
 ```
 
-Expected: `uname -m` is `aarch64`, all commands resolve, and the container exits 0.
+Expected: `uname -m` is `aarch64`, all commands resolve, `clang-tidy --version` reports LLVM 16, and the container exits 0.
 
 - [ ] **Step 5: Complete the ChCore build**
 
