@@ -15,8 +15,8 @@
 指南按实际操作顺序组织：
 
 1. 适用范围与前置条件：Apple Silicon、Docker Desktop/OrbStack、仓库目录。
-2. 环境检查：确认宿主架构、Docker daemon、精确 recipe 镜像名称与容器 `aarch64`。
-3. 首次构建：依次运行 `defconfig raspi3` 和 `build`，解释首次镜像构建耗时及缓存行为。
+2. 环境检查：先确认宿主架构与 Docker daemon；首次使用时不要求尚未创建的 recipe 镜像存在。
+3. 首次构建：先运行 `defconfig raspi3` 触发镜像创建，再用精确 recipe 镜像名称确认容器为 `aarch64`，最后运行 `build`；解释首次镜像构建耗时及缓存行为。
 4. QEMU 启动：运行 `./chbuild run`，说明 `-nographic`、可识别的启动输出与 `Ctrl-a x` 退出方式。
 5. 日常工作流：增量构建、`clean`、`distclean` 的使用边界。
 6. 产物与日志：说明 `build/kernel.img`、`build/simulate.sh`、`build/exec_log` 和 `build/gdb-port`。

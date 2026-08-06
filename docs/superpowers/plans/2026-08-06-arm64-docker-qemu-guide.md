@@ -41,7 +41,7 @@
 ## 适用范围
 ## 前置条件
 ## 1. 检查宿主机与 Docker
-## 2. 配置 Raspi3
+## 2. 配置 Raspi3 并检查 ARM64 镜像
 ## 3. 完整构建
 ## 4. 使用 QEMU 启动
 ## 5. 日常增量构建与清理
@@ -56,11 +56,12 @@
 uname -m
 docker info
 
+./chbuild defconfig raspi3
+
 chcore_image=$(./chbuild image)
 docker image inspect "$chcore_image"
 docker run --rm --platform linux/arm64 "$chcore_image" uname -m
 
-./chbuild defconfig raspi3
 ./chbuild build
 ./chbuild run
 
@@ -69,7 +70,7 @@ docker run --rm --platform linux/arm64 "$chcore_image" uname -m
 ./chbuild --help
 ```
 
-解释首次运行会构建镜像并下载软件包，后续会使用 recipe-derived 标签和 Docker 层缓存；APT 软件包不是不可变快照。说明成功启动时可看到 `[ChCore] uart init finished`、CPU 激活信息和 ChCore shell，按 `Ctrl-a x` 退出。说明 `clean` 用于重新构建而保留 `.config`，`distclean` 删除构建目录与 `.config`，切换平台或怀疑旧状态时使用后者。列出四个产物路径及用途。
+明确说明首次使用时 `./chbuild image` 只计算名称，并不创建镜像；因此先运行 `./chbuild defconfig raspi3`，再执行 `docker image inspect` 和容器 `uname -m` 检查。解释首次配置会构建镜像并下载软件包，后续会使用 recipe-derived 标签和 Docker 层缓存；APT 软件包不是不可变快照。说明成功启动时可看到 `[ChCore] uart init finished`、CPU 激活信息和 ChCore shell，按 `Ctrl-a x` 退出。说明 `clean` 用于重新构建而保留 `.config`，`distclean` 删除构建目录与 `.config`，切换平台或怀疑旧状态时使用后者。列出四个产物路径及用途。
 
 常见问题必须覆盖：Docker daemon 未启动、宿主不是 ARM64、缺少 `.config`、缺少 `build/simulate.sh`、旧构建状态、需要强制重建 recipe 镜像、QEMU 终端似乎无响应。强制重建镜像时先精确解析标签，再只删除该标签：
 
@@ -115,7 +116,7 @@ git diff --check
 
 - [ ] **Step 5: 人工自审**
 
-逐段确认：命令都从仓库根目录执行；只承诺 Raspi3；没有直接推荐运行 `build/simulate.sh`；没有完全可复现镜像承诺；故障恢复不包含破坏性 Git 命令；中文说明对首次使用者无需阅读实现即可理解。
+逐段确认：命令都从仓库根目录执行；首次镜像检查位于 `defconfig raspi3` 之后；只承诺 Raspi3；没有直接推荐运行 `build/simulate.sh`；没有完全可复现镜像承诺；故障恢复不包含破坏性 Git 命令；中文说明对首次使用者无需阅读实现即可理解。
 
 - [ ] **Step 6: 提交文档**
 
