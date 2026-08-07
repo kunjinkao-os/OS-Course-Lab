@@ -6,3 +6,13 @@
 config.mak
 lib/musl-gcc.specs
 /obj/
+
+# ChCore libc 构建时生成的移植覆盖状态
+*.bak
+/arch/remove_bak.sh
+/include/chcore
+/include/chcore-internal
+/src/chcore-port
+/src/thread/aarch64/CMakeLists.txt
+/src/thread/aarch64/__thread_exit.S
+/src/thread/aarch64/__unmapself.S
