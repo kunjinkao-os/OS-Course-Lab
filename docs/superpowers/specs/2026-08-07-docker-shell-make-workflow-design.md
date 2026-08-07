@@ -122,11 +122,11 @@ executable in an isolated temporary directory. It will verify:
    failure.
 5. `clean` and `distclean` delegate to the matching `chbuild` commands.
 
-The existing `tests/chbuild_arm64_test.sh` remains unchanged and will also be
-run to ensure the Docker wrapper behavior is not regressed. A real build will
-verify that `make` generates `build/kernel.img` and `build/simulate.sh`. A
-bounded QEMU smoke test will verify visible ChCore boot output without leaving
-an interactive QEMU process behind.
+`tests/chbuild_arm64_test.sh` is extended to cover cached and missing-image
+`prepare-image` behavior while preserving side-effect-free plain `image`
+coverage. A real build will verify that `make` generates `build/kernel.img`
+and `build/simulate.sh`. A bounded QEMU smoke test will verify visible ChCore
+boot output without leaving an interactive QEMU process behind.
 
 ## Documentation
 
