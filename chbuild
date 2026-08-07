@@ -260,6 +260,7 @@ ${BOLD}COMMANDS:${NONE}
 
     ${BOLD}help, --help, -h${NONE}      print this help text
     ${BOLD}image${NONE}                 print the exact recipe-derived local image name
+    ${BOLD}prepare-image${NONE}         prepare the exact recipe-derived local image
     ${BOLD}update-submodules${NONE}     update Git submodules according to config file
 
   Local or Docker:
@@ -409,6 +410,10 @@ _main() {
             ;;
         image)
             image
+            exit
+            ;;
+        prepare-image)
+            _prepare_docker_image
             exit
             ;;
         sync)

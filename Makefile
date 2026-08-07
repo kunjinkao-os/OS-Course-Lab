@@ -1,6 +1,5 @@
 CHBUILD ?= ./chbuild
 PLATFORM ?= raspi3
-CONFIG ?= .config
 
 .DEFAULT_GOAL := all
 
@@ -11,10 +10,10 @@ all: build
 defconfig:
 	$(CHBUILD) defconfig $(PLATFORM)
 
-$(CONFIG):
+.config:
 	$(CHBUILD) defconfig $(PLATFORM)
 
-build: $(CONFIG)
+build: .config
 	$(CHBUILD) build
 
 qemu: build

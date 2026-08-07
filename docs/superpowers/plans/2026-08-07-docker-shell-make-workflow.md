@@ -8,6 +8,13 @@
 
 **Tech Stack:** GNU Make, Bash, existing `chbuild`, CMake, Docker `linux/arm64`, QEMU Raspi3
 
+## Approved Final Review Correction
+
+The Docker-shell entry must call `./chbuild prepare-image` before resolving
+`./chbuild image`, so it works with an absent `.config` or a pruned image.
+The root Makefile uses a literal `.config` prerequisite because `chbuild`
+hardcodes that path; only `CHBUILD` and `PLATFORM` are supported overrides.
+
 ## Global Constraints
 
 - The default platform is exactly `raspi3`; `chbuild run` remains the authority that rejects unsupported QEMU platforms.
@@ -28,7 +35,7 @@
 
 **Interfaces:**
 - Consumes: `./chbuild defconfig <platform>`, `./chbuild build`, `./chbuild run`, `./chbuild clean`, and `./chbuild distclean`.
-- Produces: phony Make targets `all`, `defconfig`, `build`, `qemu`, `clean`, `distclean`, and `help`; overridable Make variables `CHBUILD`, `PLATFORM`, and `CONFIG`.
+- Produces: phony Make targets `all`, `defconfig`, `build`, `qemu`, `clean`, `distclean`, and `help`; overridable Make variables `CHBUILD` and `PLATFORM`.
 
 - [ ] **Step 1: Write the failing Make workflow regression test**
 
@@ -135,7 +142,6 @@ Create `Makefile` with this complete content. Recipe lines must begin with liter
 ```make
 CHBUILD ?= ./chbuild
 PLATFORM ?= raspi3
-CONFIG ?= .config
 
 .DEFAULT_GOAL := all
 
@@ -146,10 +152,10 @@ all: build
 defconfig:
 	$(CHBUILD) defconfig $(PLATFORM)
 
-$(CONFIG):
+.config:
 	$(CHBUILD) defconfig $(PLATFORM)
 
-build: $(CONFIG)
+build: .config
 	$(CHBUILD) build
 
 qemu: build
@@ -226,11 +232,11 @@ Insert the following section in `README.md` immediately after the existing `Buil
 ````markdown
 ### Docker shell and Make workflow
 
-To work in an interactive toolchain shell, first let `chbuild` create the
-current recipe image and Raspi3 configuration if needed:
+To work in an interactive toolchain shell, first prepare the current recipe
+image:
 
 ```sh
-test -f .config || ./chbuild defconfig raspi3
+./chbuild prepare-image
 chcore_image=$(./chbuild image)
 docker run --rm -it \
   --platform linux/arm64 \

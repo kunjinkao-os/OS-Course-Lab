@@ -51,6 +51,14 @@ make -s -C "$work_dir"
 assert_log 'build'
 
 reset_fixture
+make -s -C "$work_dir" CONFIG=other
+assert_log 'defconfig raspi3' 'build'
+
+: >"$MAKE_WORKFLOW_LOG"
+make -s -C "$work_dir" CONFIG=other
+assert_log 'build'
+
+reset_fixture
 make -s -C "$work_dir" qemu
 assert_log 'defconfig raspi3' 'build' 'run'
 

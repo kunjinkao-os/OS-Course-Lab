@@ -29,11 +29,11 @@ console to the terminal. Press `Ctrl-a x` to exit QEMU.
 
 ### Docker shell and Make workflow
 
-To work in an interactive toolchain shell, first let `chbuild` create the
-current recipe image and Raspi3 configuration if needed:
+To work in an interactive toolchain shell, first prepare the current recipe
+image:
 
 ```sh
-test -f .config || ./chbuild defconfig raspi3
+./chbuild prepare-image
 chcore_image=$(./chbuild image)
 docker run --rm -it \
   --platform linux/arm64 \

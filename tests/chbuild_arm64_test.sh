@@ -29,6 +29,7 @@ export PATH="$tmp_dir:$real_path"
 help_output=$("$repo_dir/chbuild" --help)
 grep -F 'run' <<<"$help_output" >/dev/null
 grep -F 'image' <<<"$help_output" >/dev/null
+grep -F 'prepare-image' <<<"$help_output" >/dev/null
 grep -F 'linux/arm64' <<<"$help_output" >/dev/null
 
 : >"$DOCKER_LOG"
@@ -39,6 +40,25 @@ if [[ ! "$image_name" =~ ^chcore-build:arm64-[0-9a-f]{12}$ ]]; then
 fi
 if [ -s "$DOCKER_LOG" ]; then
     echo "image command unexpectedly contacted Docker" >&2
+    exit 1
+fi
+
+: >"$DOCKER_LOG"
+FAKE_IMAGE_INSPECT_STATUS=0 "$repo_dir/chbuild" prepare-image >/dev/null
+grep -E '^info$' "$DOCKER_LOG" >/dev/null
+grep -E '^image inspect chcore-build:arm64-[0-9a-f]{12}$' "$DOCKER_LOG" >/dev/null
+if grep -E '^(build |run )' "$DOCKER_LOG" >/dev/null; then
+    echo "cached prepare-image unexpectedly built or ran a container" >&2
+    exit 1
+fi
+
+: >"$DOCKER_LOG"
+"$repo_dir/chbuild" prepare-image >/dev/null
+grep -E '^info$' "$DOCKER_LOG" >/dev/null
+grep -E '^image inspect chcore-build:arm64-[0-9a-f]{12}$' "$DOCKER_LOG" >/dev/null
+grep -E '^build --platform linux/arm64 -t chcore-build:arm64-[0-9a-f]{12} -f scripts/docker/arm64/Dockerfile \.$' "$DOCKER_LOG" >/dev/null
+if grep -E '^run ' "$DOCKER_LOG" >/dev/null; then
+    echo "prepare-image unexpectedly ran a command container" >&2
     exit 1
 fi
 

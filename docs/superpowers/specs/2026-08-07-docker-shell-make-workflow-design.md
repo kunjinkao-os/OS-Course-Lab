@@ -72,6 +72,7 @@ Documentation will show an interactive shell using the canonical
 recipe-derived image name:
 
 ```sh
+./chbuild prepare-image
 chcore_image=$(./chbuild image)
 docker run --rm -it \
   --platform linux/arm64 \
@@ -84,8 +85,16 @@ docker run --rm -it \
 
 The documentation will also explain that a local alias such as
 `chcore-dev:arm64` may be substituted for convenience, but the canonical image
-name from `./chbuild image` is the portable default. The image must already
-exist; the documented first-use `./chbuild defconfig raspi3` flow creates it.
+name from `./chbuild image` is the portable default. `./chbuild prepare-image`
+creates the exact current image without configuring or building ChCore; `make`
+creates `.config` when it is absent.
+
+## Approved Final Review Correction
+
+`prepare-image` is a local `chbuild` command that reuses the existing
+recipe-derived `linux/arm64` image preparation path. The Make prerequisite is
+the literal `.config`, because `chbuild` hardcodes that path; only `CHBUILD`
+and `PLATFORM` are supported Make overrides.
 
 No Docker shell management script is added in this change. Container creation
 remains an explicit Docker command or a dev-container operation.
