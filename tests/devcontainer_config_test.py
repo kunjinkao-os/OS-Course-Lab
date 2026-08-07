@@ -7,10 +7,11 @@ ROOT = Path(__file__).resolve().parent.parent
 dockerfile = (ROOT / "scripts/docker/arm64/Dockerfile").read_text()
 devcontainer = json.loads((ROOT / ".devcontainer/devcontainer.json").read_text())
 
-workspace = "${localWorkspaceFolder}"
-assert devcontainer["workspaceFolder"] == workspace
+workspace_source = "${localWorkspaceFolder}"
+workspace_target = "/workspaces/${localWorkspaceFolderBasename}"
+assert devcontainer["workspaceFolder"] == workspace_target
 assert devcontainer["workspaceMount"] == (
-    f"source={workspace},target={workspace},type=bind"
+    f"source={workspace_source},target={workspace_target},type=bind"
 )
 
 for package in ("gdb-multiarch", "clangd-16"):

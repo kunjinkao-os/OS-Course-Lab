@@ -52,6 +52,8 @@ make
 make qemu
 ```
 
+默认情况下，仓库在容器内位于 `/workspaces/chcore-source`。推荐始终在该容器路径中完成配置、构建、运行和调试。
+
 `make` 会在缺少 `.config` 时自动生成 Raspi3 默认配置，然后构建完整系统。`make qemu` 会先进行增量构建，再使用 QEMU 启动 ChCore。
 
 QEMU 使用无图形串口模式运行。按 `Ctrl-a x` 可以退出。
@@ -66,6 +68,8 @@ make qemu
 ```
 
 此时 `chbuild` 会自动准备并启动临时 ARM64 容器，不要求宿主机安装交叉编译工具链。
+
+这是 Dev Container 之外的备选入口。CMake 缓存包含源码绝对路径，因此不要在宿主机路径和 `/workspaces/chcore-source` 之间直接复用同一个 `build/`；切换开发方式前应删除可再生的 `build/` 并重新构建。
 
 底层 `chbuild` 入口与上述流程等价：
 
@@ -203,11 +207,11 @@ make qemu-gdb-stop
 
 ### CMake 报告源码目录与缓存目录不一致
 
-这表示 `build/CMakeCache.txt` 记录的源码绝对路径与当前工作区路径不同，通常发生在同一个 `build/` 先后从宿主机路径和旧版 Dev Container 的 `/workspaces/...` 路径使用时。
+这表示 `build/CMakeCache.txt` 记录的源码绝对路径与当前工作区路径不同，通常发生在同一个 `build/` 先后从宿主机路径和 Dev Container 的 `/workspaces/...` 路径使用时。
 
-当前 Dev Container 会把仓库挂载到与宿主机相同的绝对路径。更新代码后执行 **Dev Containers: Rebuild Container**，然后在新容器中重新运行 `make`。
+当前 Dev Container 固定使用 `/workspaces/<仓库名>`，本仓库通常为 `/workspaces/chcore-source`。如果希望完全在容器中开发，请不要再从宿主机执行构建命令。
 
-如果缓存最初是在旧版 `/workspaces/...` 路径下生成，重建容器后仍然报错，可以只删除可再生的构建目录并重新构建；`.config` 会保留：
+首次从宿主机构建切换到 Dev Container 时，在容器终端只删除可再生的构建目录并重新构建；`.config` 会保留：
 
 ```sh
 rm -rf -- build
