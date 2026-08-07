@@ -174,4 +174,4 @@ git log -2 --oneline
 test -d /Volumes/linux_code/OS-repo/chcore-source/build
 ```
 
-Expected: Git 状态无输出；日志顶部是忽略规则提交，其后是本实施计划提交；`build/` 仍存在。
+Expected: Git 状态无输出；日志顶部是忽略规则提交，其后是最近一次清理计划文档提交；`build/` 仍存在。
