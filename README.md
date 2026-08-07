@@ -27,6 +27,46 @@ packages can resolve differently as the Ubuntu and LLVM repositories change.
 `./chbuild run` starts QEMU in `-nographic` mode and connects the ChCore serial
 console to the terminal. Press `Ctrl-a x` to exit QEMU.
 
+### Docker shell and Make workflow
+
+To work in an interactive toolchain shell, first let `chbuild` create the
+current recipe image and Raspi3 configuration if needed:
+
+```sh
+test -f .config || ./chbuild defconfig raspi3
+chcore_image=$(./chbuild image)
+docker run --rm -it \
+  --platform linux/arm64 \
+  -u "$(id -u):$(id -g)" \
+  -v "$PWD:$PWD" \
+  -w "$PWD" \
+  "$chcore_image" \
+  bash
+```
+
+From the repository root inside that shell, build or build-and-boot with:
+
+```sh
+make
+make qemu
+```
+
+`make` creates the default Raspi3 configuration when `.config` is absent and
+then performs an incremental full build. `make qemu` always builds first and
+then starts the generated QEMU launcher. Press `Ctrl-a x` to leave QEMU.
+
+The same Make commands also work directly on an Apple Silicon host; in that
+case `chbuild` starts the temporary ARM64 container automatically. A local
+alias such as `chcore-dev:arm64` may replace `"$chcore_image"`, but the
+recipe-derived name from `./chbuild image` is the portable source of truth.
+
+Clean while retaining `.config`, or remove both build output and configuration:
+
+```sh
+make clean
+make distclean
+```
+
 To confirm that the exact image for the current recipe is ARM64, run:
 
 ```sh
