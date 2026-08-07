@@ -8,6 +8,7 @@
 - VS Code Dev Container 开发环境；
 - `make` 驱动的日常构建与 QEMU 启动流程；
 - VS Code F5 一键启动 QEMU 并连接 GDB 的内核调试流程。
+- 注意，必须make后才能启动语言服务器clangd
 
 ## 仓库结构
 
@@ -35,6 +36,8 @@
 
 `chbuild` 会在首次使用时构建本地 `linux/arm64` 工具链镜像，后续复用由 Dockerfile 和相关构建文件计算出的镜像标签及 Docker 缓存。Ubuntu ARM64 基础镜像按 digest 固定，但 APT 软件包没有固定到不可变快照，因此不同时间重新构建的镜像内容仍可能略有差异。
 
+VS Code Dev Container 默认直接拉取已验证的 ARM64 镜像 `docker.io/kunjinkao512/chcore-dev:2026-08-07-arm64`，无需在首次打开工作区时重新安装系统工具链。工作区扩展仍由 `.devcontainer/devcontainer.json` 自动安装。
+
 ## 快速开始
 
 ### 使用 VS Code Dev Container
@@ -44,7 +47,7 @@
 1. 使用 VS Code 打开仓库根目录。
 2. 安装 **Dev Containers** 扩展。
 3. 执行 **Dev Containers: Reopen in Container**。
-4. 等待 ARM64 工具链镜像和工作区扩展安装完成。
+4. 等待 ARM64 工具链镜像拉取和工作区扩展安装完成。
 5. 在容器终端执行：
 
 ```sh
@@ -203,7 +206,11 @@ make qemu-gdb-stop
 
 ### Dev Container 中缺少 clangd 或 gdb-multiarch
 
-执行 **Dev Containers: Rebuild Container**，确保 VS Code 使用当前 Dockerfile 重新构建镜像。
+先拉取已发布镜像，再执行 **Dev Containers: Rebuild Container**：
+
+```sh
+docker pull kunjinkao512/chcore-dev:2026-08-07-arm64
+```
 
 ### CMake 报告源码目录与缓存目录不一致
 
@@ -227,8 +234,8 @@ make
 ### 检查镜像架构
 
 ```sh
-chcore_image=$(./chbuild image)
-docker run --rm --platform linux/arm64 "$chcore_image" uname -m
+docker run --rm --platform linux/arm64 \
+  kunjinkao512/chcore-dev:2026-08-07-arm64 uname -m
 ```
 
 预期输出为 `aarch64`。

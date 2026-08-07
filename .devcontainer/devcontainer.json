@@ -2,11 +2,7 @@
   "name": "ChCore-Dev",
   "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/${localWorkspaceFolderBasename},type=bind",
   "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
-  "build": {
-    "dockerfile": "../scripts/docker/arm64/Dockerfile",
-    "context": "..",
-    "options": ["--platform=linux/arm64"]
-  },
+  "image": "docker.io/kunjinkao512/chcore-dev:2026-08-07-arm64",
   "remoteUser": "stu",
   "updateRemoteUserUID": true,
   "runArgs": [
@@ -20,6 +16,7 @@
   "customizations": {
     "vscode": {
       "extensions": [
+        "ms-ceintl.vscode-language-pack-zh-hans",
         "ms-vscode.cpptools",
         "ms-vscode.hexeditor",
         "llvm-vs-code-extensions.vscode-clangd",
