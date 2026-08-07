@@ -33,6 +33,7 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         bash \
         binutils-aarch64-linux-gnu \
+        clangd-16 \
         clang-tidy-16 \
         cmake \
         cmake-curses-gui \
@@ -41,6 +42,7 @@ RUN apt-get update \
         g++-aarch64-linux-gnu \
         gcc \
         gcc-aarch64-linux-gnu \
+        gdb-multiarch \
         git \
         make \
         ninja-build \
@@ -56,6 +58,7 @@ COPY scripts/docker/arm64/read_procmgr_elf_tool.py \
     /usr/local/bin/read_procmgr_elf_tool
 
 RUN chmod 0755 /usr/local/bin/read_procmgr_elf_tool \
+    && ln -s /usr/bin/clangd-16 /usr/local/bin/clangd \
     && ln -s /usr/bin/clang-tidy-16 /usr/local/bin/clang-tidy \
     && ln -s /usr/bin/make /usr/local/bin/gmake \
     && groupadd --gid "${USER_GID}" "${USERNAME}" \

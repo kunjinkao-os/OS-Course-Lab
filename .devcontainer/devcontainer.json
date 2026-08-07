@@ -1,20 +1,33 @@
 {
-	"name": "ChCore-Dev",
-	"build": {
-		"dockerfile": "../scripts/docker/arm64/Dockerfile",
-		"context": "..",
-		"options": ["--platform=linux/arm64"]
-	},
-	"remoteUser": "stu",
-	"updateRemoteUserUID": true,
-	"runArgs": ["--hostname", "Chcore", "--platform", "linux/arm64"],
-	"customizations": {
-		"vscode": {
-		"extensions": [
-			"ms-vscode.cpptools",
-			"llvm-vs-code-extensions.vscode-clangd",
-			"ms-vscode.makefile-tools"
-		]
-	}
+  "name": "ChCore-Dev",
+  "build": {
+    "dockerfile": "../scripts/docker/arm64/Dockerfile",
+    "context": "..",
+    "options": ["--platform=linux/arm64"]
+  },
+  "remoteUser": "stu",
+  "updateRemoteUserUID": true,
+  "runArgs": [
+    "--hostname",
+    "Chcore",
+    "--platform",
+    "linux/arm64",
+    "--cap-add=SYS_PTRACE",
+    "--security-opt=seccomp=unconfined"
+  ],
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-vscode.cpptools",
+        "ms-vscode.hexeditor",
+        "llvm-vs-code-extensions.vscode-clangd",
+        "ms-vscode.makefile-tools",
+        "twxs.cmake",
+        "dan-c-underwood.arm"
+      ],
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash"
+      }
+    }
   }
 }
