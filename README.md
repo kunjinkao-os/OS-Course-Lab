@@ -60,6 +60,26 @@ case `chbuild` starts the temporary ARM64 container automatically. A local
 alias such as `chcore-dev:arm64` may replace `"$chcore_image"`, but the
 recipe-derived name from `./chbuild image` is the portable source of truth.
 
+### VS Code Dev Container and kernel debugging
+
+1. Install the VS Code **Dev Containers** extension.
+2. Open this repository and run **Dev Containers: Reopen in Container**.
+3. Wait for the ARM64 image and workspace extensions to finish installing.
+4. Open a kernel source file, set a breakpoint, select **QEMU (cppdbg)**,
+   and press F5.
+5. Stop the debugger normally. The post-debug task stops QEMU and releases
+   GDB port 1234.
+
+F5 creates a Raspi3 configuration when needed and enables
+`CHCORE_KERNEL_DEBUG` without changing other options. It refuses to overwrite
+a non-Raspi3 configuration. Use `make qemu` for normal execution,
+`make qemu-gdb` to start a manual debug session, and `make qemu-gdb-stop` to
+clean up a stale session.
+
+The Debug Console accepts GDB commands through the MI adapter. Prefix a normal
+GDB command with `-exec`, for example `-exec info registers` or
+`-exec monitor system_reset`.
+
 Clean while retaining `.config`, or remove both build output and configuration:
 
 ```sh
@@ -83,6 +103,12 @@ local tag; it does not select an arbitrary older `arm64-*` tag.
   OrbStack, or your Docker-compatible daemon, then rerun the command.
 - This workflow requires an `arm64` host. On a non-ARM host, use a supported
   ARM64 environment before running `chbuild`.
+- If GDB port 1234 is busy, stop the previous debug session or run
+  `make qemu-gdb-stop`, then press F5 again.
+- Kernel debugging supports only Raspi3. Preserve any configuration you need,
+  run `make distclean`, and let F5 create the Raspi3 debug configuration.
+- If `gdb-multiarch` or `clangd` is missing, run **Dev Containers: Rebuild
+  Container** so VS Code uses the current recipe-derived image.
 - If `build/simulate.sh` is missing, first run `./chbuild defconfig raspi3` and
   `./chbuild build`; use `./chbuild run` rather than invoking the simulator
   directly.
