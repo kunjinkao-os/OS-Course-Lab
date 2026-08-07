@@ -201,6 +201,19 @@ make qemu-gdb-stop
 
 执行 **Dev Containers: Rebuild Container**，确保 VS Code 使用当前 Dockerfile 重新构建镜像。
 
+### CMake 报告源码目录与缓存目录不一致
+
+这表示 `build/CMakeCache.txt` 记录的源码绝对路径与当前工作区路径不同，通常发生在同一个 `build/` 先后从宿主机路径和旧版 Dev Container 的 `/workspaces/...` 路径使用时。
+
+当前 Dev Container 会把仓库挂载到与宿主机相同的绝对路径。更新代码后执行 **Dev Containers: Rebuild Container**，然后在新容器中重新运行 `make`。
+
+如果缓存最初是在旧版 `/workspaces/...` 路径下生成，重建容器后仍然报错，可以只删除可再生的构建目录并重新构建；`.config` 会保留：
+
+```sh
+rm -rf -- build
+make
+```
+
 ### 缺少 build/simulate.sh
 
 先运行 `make` 完成构建，再使用 `make qemu` 启动。不要手工创建或直接维护 `build/simulate.sh`。

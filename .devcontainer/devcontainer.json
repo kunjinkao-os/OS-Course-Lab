@@ -1,5 +1,7 @@
 {
   "name": "ChCore-Dev",
+  "workspaceMount": "source=${localWorkspaceFolder},target=${localWorkspaceFolder},type=bind",
+  "workspaceFolder": "${localWorkspaceFolder}",
   "build": {
     "dockerfile": "../scripts/docker/arm64/Dockerfile",
     "context": "..",

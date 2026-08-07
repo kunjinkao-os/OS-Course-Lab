@@ -7,6 +7,12 @@ ROOT = Path(__file__).resolve().parent.parent
 dockerfile = (ROOT / "scripts/docker/arm64/Dockerfile").read_text()
 devcontainer = json.loads((ROOT / ".devcontainer/devcontainer.json").read_text())
 
+workspace = "${localWorkspaceFolder}"
+assert devcontainer["workspaceFolder"] == workspace
+assert devcontainer["workspaceMount"] == (
+    f"source={workspace},target={workspace},type=bind"
+)
+
 for package in ("gdb-multiarch", "clangd-16"):
     assert package in dockerfile, f"Dockerfile missing {package}"
 assert "ln -s /usr/bin/clangd-16 /usr/local/bin/clangd" in dockerfile
