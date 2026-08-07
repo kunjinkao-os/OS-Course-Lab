@@ -70,6 +70,14 @@ fi
 assert_log 'defconfig raspi3' 'build'
 
 reset_fixture
+make -s -C "$work_dir" qemu-gdb
+assert_log 'debug'
+
+: >"$MAKE_WORKFLOW_LOG"
+make -s -C "$work_dir" qemu-gdb-stop
+assert_log 'debug-stop'
+
+reset_fixture
 make -s -C "$work_dir" clean
 assert_log 'clean'
 
@@ -83,6 +91,7 @@ assert_log 'distclean'
 
 help_output=$(make -s -C "$work_dir" help)
 grep -F 'make qemu' <<<"$help_output" >/dev/null
+grep -F 'make qemu-gdb' <<<"$help_output" >/dev/null
 grep -F 'make distclean' <<<"$help_output" >/dev/null
 
 echo "Make workflow tests passed"

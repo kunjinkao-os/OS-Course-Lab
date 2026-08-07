@@ -28,6 +28,8 @@ export PATH="$tmp_dir:$real_path"
 
 help_output=$("$repo_dir/chbuild" --help)
 grep -F 'run' <<<"$help_output" >/dev/null
+grep -F 'debug' <<<"$help_output" >/dev/null
+grep -F 'debug-stop' <<<"$help_output" >/dev/null
 grep -F 'image' <<<"$help_output" >/dev/null
 grep -F 'prepare-image' <<<"$help_output" >/dev/null
 grep -F 'linux/arm64' <<<"$help_output" >/dev/null
@@ -115,6 +117,16 @@ if grep -E '^build ' "$DOCKER_LOG" >/dev/null; then
     echo "cached image unexpectedly rebuilt" >&2
     exit 1
 fi
+
+: >"$DOCKER_LOG"
+FAKE_IMAGE_INSPECT_STATUS=0 "$repo_dir/chbuild" debug
+grep -E '^run .*--platform linux/arm64 .*chcore-build:arm64-[0-9a-f]{12} .*chbuild debug$' \
+    "$DOCKER_LOG" >/dev/null
+
+: >"$DOCKER_LOG"
+FAKE_IMAGE_INSPECT_STATUS=0 "$repo_dir/chbuild" debug-stop
+grep -E '^run .*--platform linux/arm64 .*chcore-build:arm64-[0-9a-f]{12} .*chbuild debug-stop$' \
+    "$DOCKER_LOG" >/dev/null
 
 if FAKE_UNAME=x86_64 "$repo_dir/chbuild" build >"$tmp_dir/out" 2>&1; then
     echo "x86_64 host unexpectedly accepted" >&2

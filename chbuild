@@ -18,6 +18,7 @@ clean_command="$self clean"
 
 cmake_build_dir="build"
 cmake_cache_file="build/CMakeCache.txt"
+debug_pid_file="$cmake_build_dir/qemu-gdb.pid"
 
 cmake_script_dir="scripts/build/cmake"
 cmake_init_cache_default="$cmake_script_dir/LoadConfigDefault.cmake"
@@ -205,6 +206,69 @@ run() {
     exec "$cmake_build_dir/simulate.sh"
 }
 
+_prepare_debug_config() {
+    if [ ! -f "$config_file" ]; then
+        defconfig raspi3
+    fi
+    if ! grep -q '^CHCORE_PLAT:STRING=raspi3$' "$config_file"; then
+        _echo_err "Kernel debugging supports only raspi3; run '$self distclean' before switching platforms"
+        return 1
+    fi
+    if grep -q '^CHCORE_KERNEL_DEBUG:BOOL=OFF$' "$config_file"; then
+        python3 - "$config_file" <<'PY'
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1])
+contents = path.read_text()
+old = "CHCORE_KERNEL_DEBUG:BOOL=OFF"
+new = "CHCORE_KERNEL_DEBUG:BOOL=ON"
+if contents.count(old) != 1:
+    raise SystemExit(f"expected exactly one {old} entry in {path}")
+path.write_text(contents.replace(old, new))
+PY
+        _echo_info "Enabled CHCORE_KERNEL_DEBUG in $config_file"
+    elif ! grep -q '^CHCORE_KERNEL_DEBUG:BOOL=ON$' "$config_file"; then
+        _echo_err "Missing CHCORE_KERNEL_DEBUG in $config_file; run '$self config' to repair it"
+        return 1
+    fi
+}
+
+debug() {
+    _prepare_debug_config
+    build
+    exec "$cmake_build_dir/simulate.sh" --wait-gdb
+}
+
+debug_stop() {
+    if [ ! -f "$debug_pid_file" ]; then
+        _echo_info "No QEMU debug session is running"
+        return 0
+    fi
+
+    local pid cmdline build_dir kernel_path proc_root
+    read -r pid <"$debug_pid_file"
+    build_dir=$(cd "$cmake_build_dir" && pwd)
+    kernel_path="$build_dir/kernel.img"
+    proc_root=${CHBUILD_PROC_ROOT:-/proc}
+    if [[ ! "$pid" =~ ^[0-9]+$ ]] || [ ! -r "$proc_root/$pid/cmdline" ]; then
+        rm -f "$debug_pid_file"
+        _echo_warn "Removed stale QEMU debug PID file"
+        return 0
+    fi
+
+    cmdline=$(tr '\0' ' ' <"$proc_root/$pid/cmdline")
+    if [[ "$cmdline" != *qemu-system-aarch64* || "$cmdline" != *"$kernel_path"* ]]; then
+        rm -f "$debug_pid_file"
+        _echo_warn "Refused to stop PID $pid because it is not this ChCore QEMU"
+        return 0
+    fi
+
+    kill "$pid"
+    rm -f "$debug_pid_file"
+    _echo_succ "Stopped QEMU debug session"
+}
+
 image() {
     _docker_image_name
 }
@@ -270,6 +334,8 @@ ${BOLD}COMMANDS:${NONE}
     ${BOLD}menuconfig${NONE}            use TUI menu to edit config
     ${BOLD}build [target]${NONE}        build the project (\`target\` can be \`libc\`, \`user\`, \`kernel\` or empty)
     ${BOLD}run${NONE}                   boot a raspi3 build in QEMU (linux/arm64, -nographic)
+    ${BOLD}debug${NONE}                 build a debug kernel and wait for GDB on port 1234
+    ${BOLD}debug-stop${NONE}            stop the active QEMU debug session
     ${BOLD}clean [target]${NONE}        clean the project (\`target\` can be \`libc\`, \`user\`, \`kernel\` or empty)
     ${BOLD}distclean${NONE}             clean the project and remove config file
 "
@@ -426,6 +492,14 @@ _main() {
             # need Git SSH key authentication, so must run in local env
             shift
             ci_sync $@
+            exit
+            ;;
+        debug-stop)
+            if [ -f /.dockerenv ] || [[ $run_in_docker == false ]]; then
+                debug_stop
+            else
+                _docker_run "$@"
+            fi
             exit
             ;;
         *)
