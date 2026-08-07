@@ -56,7 +56,29 @@ bash user/system-services/chcore-libc/libchcore/cmake/do_cleanup.sh \
 
 Expected: 命令返回 0，输出若干 `--- Cleanup ... symlink` 和 `--- Recover ...` 记录。
 
-- [ ] **Step 3: 验证 libc 状态干净且构建目录仍在**
+- [ ] **Step 3: 精确恢复脚本误删的 HEAD 跟踪链接**
+
+`do_cleanup.sh` 会遍历并删除目标树中的所有符号链接。以下 9 个链接原本就在
+`HEAD` 中，执行前没有工作区改动，因此只恢复这些已核对路径：
+
+Run:
+
+```bash
+git restore -- \
+  user/system-services/chcore-libc/musl-libc/arch/sparc \
+  user/system-services/chcore-libc/musl-libc/src/thread/riscv64/CMakeLists.txt \
+  user/system-services/chcore-libc/musl-libc/src/thread/riscv64/__thread_exit.S \
+  user/system-services/chcore-libc/musl-libc/src/thread/riscv64/__unmapself.S \
+  user/system-services/chcore-libc/musl-libc/src/thread/sparc \
+  user/system-services/chcore-libc/musl-libc/src/thread/x86_64/CMakeLists.txt \
+  user/system-services/chcore-libc/musl-libc/src/thread/x86_64/__thread_exit.S \
+  user/system-services/chcore-libc/musl-libc/src/thread/x86_64/__unmapself.S \
+  user/system-services/chcore-libc/musl-libc/src/thread/x86_64/set_thread_area.c
+```
+
+Expected: 命令返回 0，只恢复列出的 9 个 `HEAD` 跟踪链接。
+
+- [ ] **Step 4: 验证 libc 状态干净且构建目录仍在**
 
 Run:
 
