@@ -37,6 +37,7 @@ char cpu_stacks[PLAT_CPU_NUM][CPU_STACK_SIZE];
 struct lock big_kernel_lock;
 
 ALIGN(PAGE_SIZE)
+// start_kernel 将这个全零页装入 TTBR0；512 个 L0 描述符均无效，因此低地址翻译不再可用。
 char empty_page[4096] = {0};
 
 /* Kernel Test */
@@ -44,10 +45,10 @@ void run_test(void);
 
 void init_fpu_owner_locks(void);
 
-/*
- * @boot_flag is boot flag addresses for smp;
- * @info is now only used as board_revision for rpi4.
- */
+// ========== 内核启动：Phase 8: 到达内核主函数 (Step 8) ==========
+// [Step 8.1] 此时 CPU0 已处于 AArch64 EL1，MMU/I-cache/D-cache 已开启，并使用 TTBR1 高半区页表和正式栈。
+// AArch64 不存在 x86 的实模式→保护模式→长模式，也不使用 GDT/IDT；异常向量由稍后的 VBAR_EL1 设置。
+// boot_flag 用于放行 CPU1~3；info 仅在 Raspi4 表示板卡版本，Raspi3 会忽略它。启动主线在此完成。
 void main(paddr_t boot_flag, void *info)
 {
 	u32 ret = 0;

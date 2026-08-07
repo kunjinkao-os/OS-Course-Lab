@@ -10,6 +10,7 @@
  * See the Mulan PSL v2 for more details.
  */
 
+// consts.h 提供 4 KiB 临时栈大小；common/asm.h 展开函数符号声明宏 BEGIN_FUNC/END_FUNC。
 #include "consts.h"
 #include <common/asm.h>
 
@@ -20,12 +21,14 @@
 .extern clear_bss_flag
 .extern init_c
 
+// ========== 内核启动：Phase 2: 复位入口与多核分流 (Step 2) ==========
 BEGIN_FUNC(_start)
+	// [Step 2.1] 从 MPIDR_EL1 取得核号：CPU0 跳到 primary，CPU1~3 留在次核等待路径。
 	mrs	x8, mpidr_el1
 	and	x8, x8,	#0xFF
 	cbz	x8, primary
 
-	/* Wait for bss clear */
+	// [Step 2.2] 次核先等待主核清完 BSS，再切到 EL1、设置各自临时栈，并等待 main 放行 SMP。
 wait_for_bss_clear:
 	adr	x0, clear_bss_flag
 	ldr	x1, [x0]
@@ -38,7 +41,6 @@ wait_for_bss_clear:
 	mov	x10, 0b11
 	msr	cntkctl_el1, x10 */
 
-	/* Turn to el1 from other exception levels. */
 	bl 	arm64_elX_to_el1
 
 	/* Prepare stack pointer and jump to C. */
@@ -58,7 +60,7 @@ wait_until_smp_enabled:
 	ldr	x3, [x1]
 	cbz	x3, wait_until_smp_enabled
 
-	/* Set CPU id */
+	// 主核进入 main 并写 boot flag 后，次核才跳入 secondary_init_c；这已超出主核启动主线。
 	mov	x0, x8
 	b 	secondary_init_c
 
@@ -67,10 +69,11 @@ wait_until_smp_enabled:
 
 primary:
 
-	/* Turn to el1 from other exception levels. */
+	// [Step 2.3] 主核调用 arm64_elX_to_el1；按执行时序转到 tools.S 的 Phase 3。
 	bl 	arm64_elX_to_el1
 
-	/* Prepare stack pointer and jump to C. */
+	// ========== 内核启动：Phase 4: 建立临时栈并进入 C (Step 4) ==========
+	// [Step 4.1] EL1 返回后把 SP 指向 CPU0 的 4 KiB 低地址启动栈顶，再直接跳到 init_c。
 	adr 	x0, boot_cpu_stack
 	add 	x0, x0, #INIT_STACK_SIZE
 	mov 	sp, x0

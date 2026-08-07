@@ -15,6 +15,7 @@
 #include <common/macro.h>
 #include <mm/vmspace.h>
 #include <mm/mm.h>
+// arch/sync.h 将 dsb(sy)/isb() 展开为带 memory clobber 的对应 AArch64 屏障指令。
 #include <arch/sync.h>
 
 /*
@@ -116,7 +117,8 @@ void flush_tlb_by_range(struct vmspace* vmspace, vaddr_t start_va, size_t len)
 
 void flush_tlb_all(void)
 {
-	/* full system barrier */
+	// ========== 内核启动：Phase 7: 切入高半区正式内核 (Step 7) ==========
+	// [Step 7.3] DSB 保证旧访存结束，VMALLE1IS 广播失效全部 EL1 stage-1 TLB 项；随后 DSB+ISB 保证新映射生效。
 	dsb(sy);
 	asm volatile("tlbi vmalle1is\n\t" : : :);
 	dsb(sy);

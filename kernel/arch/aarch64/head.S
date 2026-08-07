@@ -10,15 +10,17 @@
  * See the Mulan PSL v2 for more details.
  */
 
+// common/asm.h 展开函数宏；common/vars.h 提供 4 KiB 正式内核栈大小和高半区基址。
 #include <common/asm.h>
 #include <common/vars.h>
 
 .extern empty_page
 
-/* Args in x0 and x1 should be passed to main */
+// ========== 内核启动：Phase 7: 切入高半区正式内核 (Step 7) ==========
+// x0/x1 按 AArch64 调用约定继续传给 main；Raspi3 只使用 x0 中的次核 boot flag。
 BEGIN_FUNC(start_kernel)
 
-    /* Set the kernel stack at high vaddr */
+    // [Step 7.2] 切换到 CPU0 的高地址正式栈，暂存 main 参数；再把 TTBR0 换成全零空表，彻底废弃低地址恒等映射。
     ldr     x2, =cpu_stacks
     add     x2, x2, CPU_STACK_SIZE
     mov     sp, x2
@@ -34,15 +36,13 @@ BEGIN_FUNC(start_kernel)
     msr     ttbr0_el1, x2
     isb
 
-    /*  
-     * Call flush_tlb_all here to flush all the cached TLBs for
-     * the boot time TTBR0_EL1.
-     */
+    // [Step 7.3] 调用 mm/tlb.c 的 flush_tlb_all，清除所有可能命中旧 TTBR0 页表的缓存翻译。
     bl flush_tlb_all
 
     /* Restore x0 and x1 */
     ldp x0, x1, [sp], #16
 
+    // [Step 7.4] 恢复参数后调用内核 main；按执行时序转到 main.c 的 Phase 8。
     bl      main
 END_FUNC(start_kernel)
 

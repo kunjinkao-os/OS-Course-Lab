@@ -41,6 +41,7 @@
    SOFTWARE.
 */
 
+// common/asm.h 展开函数宏；registers.h 提供 SCTLR_EL1 的 MMU、缓存、对齐和 WXN 位。
 #include <common/asm.h>
 #include <arch/machine/registers.h>
 
@@ -67,7 +68,9 @@
 #define ICH_HCR_EL2             S3_4_C12_C11_0
 #define ICC_SRE_EL2             S3_4_C12_C9_5
 
+// ========== 内核启动：Phase 3: 从固件异常级切换到 EL1 (Step 3) ==========
 BEGIN_FUNC(arm64_elX_to_el1)
+	// [Step 3.1] 读取 CurrentEL：已在 EL1 就返回；EL2 跳到公共配置段；其余启动情形按 EL3 处理。
 	/* LAB 1 TODO 1 BEGIN */
 	/* BLANK BEGIN */
 	mrs x9, CurrentEL
@@ -81,7 +84,7 @@ BEGIN_FUNC(arm64_elX_to_el1)
 	beq .Lin_el2
 	// Otherwise, we are in EL3.
 
-	// Set EL2 to 64bit and enable the HVC instruction.
+	// [Step 3.2] EL3 路径把下一世界设为 Non-secure AArch64，并准备最终 eret 到屏蔽 DAIF 的 EL1h。
 	mrs x9, scr_el3
 	mov x10, SCR_EL3_NS | SCR_EL3_HCE | SCR_EL3_RW
 	orr x9, x9, x10
@@ -98,7 +101,7 @@ BEGIN_FUNC(arm64_elX_to_el1)
 	/* LAB 1 TODO 2 END */
 
 .Lin_el2:
-	// Disable EL1 timer traps and the timer offset.
+	// [Step 3.3] 配置 EL2/EL1 运行环境：开放 EL1 计时器和 FPU，关闭二阶段翻译与虚拟 GIC，并令 EL1 使用 AArch64。
 	mrs x9, cnthctl_el2
 	orr x9, x9, CNTHCTL_EL2_EL1PCEN | CNTHCTL_EL2_EL1PCTEN
 	msr cnthctl_el2, x9
@@ -140,6 +143,7 @@ BEGIN_FUNC(arm64_elX_to_el1)
 	mov x9, SPSR_ELX_DAIF | SPSR_ELX_EL1H
 	msr spsr_el2, x9
 
+	// [Step 3.4] 同步系统寄存器后执行异常返回，CPU 正式进入 EL1h；.Ltarget 的 ret 回到 start.S。
 	isb
 	eret
 
@@ -147,7 +151,8 @@ BEGIN_FUNC(arm64_elX_to_el1)
 	ret
 END_FUNC(arm64_elX_to_el1)
 
-// See https://developer.arm.com/documentation/den0024/a/Caches/Cache-maintenance
+// ========== 内核启动：Phase 6: 安装启动页表并开启 MMU (Step 6) ==========
+// [Step 6.1] el1_mmu_activate 调用此函数，按缓存层级、组和路失效全部数据缓存，并失效指令缓存。
 BEGIN_FUNC(invalidate_cache_all)
 	mrs     x0, clidr_el1
 	and     w3, w0, #0x07000000     // get 2x level of coherence
@@ -201,6 +206,8 @@ END_FUNC(invalidate_cache_all)
 .extern boot_ttbr1_l0
 
 
+// [Step 6.2] MAIR 属性槽：Attr0=0x00 为 Device-nGnRnE，Attr4=0xff 为普通 WBWA 缓存内存；
+// Attr1/2/3 分别保留 Device-nGnRE、Device-GRE、Normal Non-cacheable 定义。
 /* DEVICE_nGnRnE */
 #define MMU_MAIR_ATTR0		(0x00 << (8 * 0))
 
@@ -216,10 +223,8 @@ END_FUNC(invalidate_cache_all)
 /* NORMAL */
 #define MMU_MAIR_ATTR4          (0xff << (8 * 4))
 
-/*
- * Enable cached page table walks:
- * inner/outer (IRGN/ORGN): write-back + write-allocate
- */
+// [Step 6.3] TCR 令 TTBR0/TTBR1 使用 48 位 VA、Inner Shareable WBWA 页表遍历，IPS=0b101（48 位 PA）、AS=1（16 位 ASID）。
+// 注意：本文件 TG0/TG1 宏的名称与位位置对调，TG1 的 4 KiB 编码也仍是原代码中的 0；此处只说明现值，不改变行为。
 #define MMU_TCR_TG1_4k 			(0 << 14)
 #define MMU_TCR_SH1_INNER_SH	        (3 << 28)
 #define MMU_TCR_ORGN1_WBA		(1 << 26)
@@ -243,6 +248,7 @@ BEGIN_FUNC(el1_mmu_activate)
 	stp     x29, x30, [sp, #-16]!
 	mov     x29, sp
 
+	// [Step 6.1] 先跳到上方 invalidate_cache_all，返回后再清空 EL1 TLB，避免沿用固件遗留状态。
 	bl	invalidate_cache_all
 
 	/* Invalidate TLB */
@@ -250,7 +256,7 @@ BEGIN_FUNC(el1_mmu_activate)
 	isb
 	dsb     sy
 
-	/* Initialize Memory Attribute Indirection Register */
+	// [Step 6.4] 写 MAIR/TCR，并让 TTBR0 指向低地址恒等映射、TTBR1 指向内核高半区映射。
 	ldr 	x8, =MMU_MAIR_ATTR0 | MMU_MAIR_ATTR1 | MMU_MAIR_ATTR2 | MMU_MAIR_ATTR3 | MMU_MAIR_ATTR4
 	msr     mair_el1, x8
 
@@ -268,6 +274,7 @@ BEGIN_FUNC(el1_mmu_activate)
 	msr     ttbr1_el1, x8
 	isb
 
+	// [Step 6.5] 设置 SCTLR_EL1：M/C/I/WXN=1 开启 MMU、数据缓存、指令缓存和“可写即不可执行”，并关闭对齐检查。
 	mrs     x8, sctlr_el1
 	/* Enable MMU */
 	/* LAB 1 TODO 4 BEGIN */
@@ -286,6 +293,7 @@ BEGIN_FUNC(el1_mmu_activate)
 	orr     x8, x8, #SCTLR_EL1_I
 	/* Writable eXecute Never */
 	orr     x8, x8, #SCTLR_EL1_WXN
+	// [Step 6.6] 写回 SCTLR_EL1 是 MMU 真正生效点；低地址 init 依靠 TTBR0 映射继续执行。
 	msr     sctlr_el1, x8
 
 	ldp     x29, x30, [sp], #16

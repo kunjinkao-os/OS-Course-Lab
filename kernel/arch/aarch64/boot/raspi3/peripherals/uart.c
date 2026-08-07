@@ -40,6 +40,7 @@
  * for the min-uart init process.
  */
 
+// io/uart.h 展开 USE_mini_uart=0，默认实际编译 PL011 分支；uart.h 提供 BCM2837 的物理 MMIO 地址。
 #include <io/uart.h>
 
 #include "uart.h"
@@ -90,10 +91,12 @@ static void early_uart_send(unsigned int c)
 
 #else /* PL011 */
 
+// ========== 内核启动：Phase 4: 建立最小 C 运行环境 (Step 4) ==========
 void early_uart_init(void)
 {
 	unsigned int ra;
 
+	// [Step 4.3] 把 GPIO14/15 设为 PL011 ALT0，关闭上下拉；随后配置 115200 波特率、8 位 FIFO、屏蔽中断并开启收发。
 	ra = early_get32(GPFSEL1);
 
 	/* Set GPIO14 as function 0. */
@@ -141,6 +144,7 @@ void uart_send_string(char *str)
 {
 	/* LAB 1 TODO 3 BEGIN */
 	/* BLANK BEGIN */
+	// 启动期采用轮询发送；遇到换行先补回车，以适配串口终端的 CRLF。
 	int i;
 	for (i = 0; str[i] != '\0'; i++) {
 		if (str[i] == '\n')

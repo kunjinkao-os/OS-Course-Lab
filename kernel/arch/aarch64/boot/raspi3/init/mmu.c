@@ -10,6 +10,7 @@
  * See the Mulan PSL v2 for more details.
  */
 
+// macro.h 提供 BUG_ON；其余头文件展开高半区基址、链接边界、CPU 数和启动栈大小。
 #include <common/macro.h>
 #include "image.h"
 #include "boot.h"
@@ -18,7 +19,8 @@
 typedef unsigned long u64;
 typedef unsigned int u32;
 
-/* Physical memory address space: 0-1G */
+// ========== 内核启动：Phase 5: 构造启动页表 (Step 5) ==========
+// [Step 5.1] Raspi3 启动物理布局：0~0x3f000000 为普通内存，0x3f000000~1 GiB 为设备窗口。
 #define PHYSMEM_START   (0x0UL)
 #define PERIPHERAL_BASE (0x3F000000UL)
 #define PHYSMEM_END     (0x40000000UL)
@@ -28,6 +30,8 @@ typedef unsigned int u32;
 /* The size of one page table page */
 #define PTP_SIZE 4096
 #define ALIGN(n) __attribute__((__aligned__(n)))
+// 每张表占 4 KiB、含 512 个 8 字节描述符；L0/L1/L2/L3 单项分别覆盖 512 GiB/1 GiB/2 MiB/4 KiB。
+// TTBR0 四级表提供 VA=PA 的临时低地址映射，TTBR1 四级表提供 VA=KERNEL_VADDR+PA 的正式高半区映射。
 u64 boot_ttbr0_l0[PTP_ENTRIES] ALIGN(PTP_SIZE);
 u64 boot_ttbr0_l1[PTP_ENTRIES] ALIGN(PTP_SIZE);
 u64 boot_ttbr0_l2[PTP_ENTRIES] ALIGN(PTP_SIZE);
@@ -38,6 +42,9 @@ u64 boot_ttbr1_l1[PTP_ENTRIES] ALIGN(PTP_SIZE);
 u64 boot_ttbr1_l2[PTP_ENTRIES] ALIGN(PTP_SIZE);
 u64 boot_ttbr1_l3[PTP_ENTRIES] ALIGN(PTP_SIZE);
 
+// 描述符当前取值：VALID=有效；TABLE/PTE 区分下级表或末级页；PXN/UXN 禁止 EL1/EL0 执行；
+// AF 表示已访问，nG 表示非全局，SH=0b11 表示 Inner Shareable，AttrIndx=4/0 分别选择普通 WBWA/设备 nGnRnE，
+// AP=0b10 表示 EL1 只读且 EL0 不可访问。这些位共同表达页表项的地址、内存类型、权限和共享属性。
 #define IS_VALID (1UL << 0)
 #define IS_TABLE (1UL << 1)
 #define IS_PTE (1UL << 1)
@@ -65,7 +72,8 @@ void init_kernel_pt(void)
 {
         u64 vaddr = PHYSMEM_START;
 
-        /* TTBR0_EL1 0-1G */
+        // [Step 5.2] 构造 TTBR0：L0→L1→L2；前 2 MiB 再下钻 L3 以 4 KiB 页保护 init 代码和可写启动栈，
+        // 其余普通内存和外设窗口用 2 MiB 块恒等映射。低地址项置 nG，供 MMU 刚开启后的 init_c 临时使用。
         boot_ttbr0_l0[GET_L0_INDEX(vaddr)] = ((u64)boot_ttbr0_l1) | IS_TABLE
                                              | IS_VALID | NG;
         boot_ttbr0_l1[GET_L1_INDEX(vaddr)] = ((u64)boot_ttbr0_l2) | IS_TABLE
@@ -125,7 +133,9 @@ void init_kernel_pt(void)
                         | IS_VALID;
         }
 
-        /* TTBR1_EL1 0-1G */
+        // [Step 5.3] 构造 TTBR1：把物理 0~1 GiB 映射到 KERNEL_VADDR 起的高半区；前 2 MiB 用 L3 页，
+        // 其中正式 .text 设置为 EL1 只读可执行，其余页可写不可执行；后续普通内存和设备区用 2 MiB 块映射。
+        // 高半区项不置 nG，作为所有地址空间共享的全局内核映射。
         /* LAB 1 TODO 5 BEGIN */
         /* Step 1: set L0 and L1 page table entry */
         /* BLANK BEGIN */
@@ -206,12 +216,7 @@ void init_kernel_pt(void)
         /* BLANK END */
         /* LAB 1 TODO 5 END */
 
-        /*
-         * Local peripherals, e.g., ARM timer, IRQs, and mailboxes
-         *
-         * 0x4000_0000 .. 0xFFFF_FFFF
-         * 1G is enough (for Mini-UART). Map 1G page here.
-         */
+        // [Step 5.4] 最后用一个 1 GiB 的 L1 设备块映射 0x40000000 起的本地外设区，供定时器、IRQ 和 mailbox 使用。
         vaddr = KERNEL_VADDR + PHYSMEM_END;
         boot_ttbr1_l1[GET_L1_INDEX(vaddr)] = PHYSMEM_END | UXN /* Unprivileged
                                                                   execute never

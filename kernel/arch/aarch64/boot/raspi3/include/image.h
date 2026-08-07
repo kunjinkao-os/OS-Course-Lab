@@ -13,7 +13,7 @@
 #ifndef IMAGE_H
 #define IMAGE_H
 
-#define KERNEL_VADDR 0xffffff0000000000
-#define TEXT_OFFSET  0x80000
+#define KERNEL_VADDR 0xffffff0000000000 // 内核高半区虚拟地址基址。
+#define TEXT_OFFSET  0x80000            // 固件装载 kernel8.img 的物理地址。
 
 #endif /* IMAGE_H */
