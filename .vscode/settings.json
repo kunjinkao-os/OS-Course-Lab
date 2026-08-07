@@ -1,4 +1,6 @@
 {
   "clangd.arguments": ["--compile-commands-dir=build/kernel"],
-  "debug.allowBreakpointsEverywhere": true
+  "debug.allowBreakpointsEverywhere": true,
+  "cmake.configureOnOpen": false,
+  "cmake.buildDirectory": "${workspaceFolder}/build/cmake-tools"
 }

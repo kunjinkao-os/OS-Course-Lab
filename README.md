@@ -211,6 +211,8 @@ make qemu-gdb-stop
 
 当前 Dev Container 固定使用 `/workspaces/<仓库名>`，本仓库通常为 `/workspaces/chcore-source`。如果希望完全在容器中开发，请不要再从宿主机执行构建命令。
 
+仓库已经关闭 VS Code CMake Tools 的自动配置，并将其手动配置目录隔离到 `build/cmake-tools`。构建 ChCore 时请使用 `make`，不要执行 **CMake: Configure**，以免绕过 `chbuild` 的配置流程。
+
 首次从宿主机构建切换到 Dev Container 时，在容器终端只删除可再生的构建目录并重新构建；`.config` 会保留：
 
 ```sh

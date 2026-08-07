@@ -16,6 +16,8 @@ launches = load("launch.json")["configurations"]
 
 assert settings["clangd.arguments"] == ["--compile-commands-dir=build/kernel"]
 assert settings["debug.allowBreakpointsEverywhere"] is True
+assert settings["cmake.configureOnOpen"] is False
+assert settings["cmake.buildDirectory"] == "${workspaceFolder}/build/cmake-tools"
 
 tasks_by_label = {task["label"]: task for task in tasks}
 assert tasks_by_label["Build ChCore"]["command"] == "make"
