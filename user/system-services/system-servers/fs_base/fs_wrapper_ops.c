@@ -118,6 +118,7 @@ ssize_t default_ssize_t_server_operation(ipc_msg_t *ipc_msg,
 int fs_wrapper_open(badge_t client_badge, ipc_msg_t *ipc_msg,
                     struct fs_request *fr)
 {
+        /* Lab 5 TODO Begin (Part 4)*/
         int new_fd;
         char *path;
         int flags;
@@ -144,6 +145,7 @@ int fs_wrapper_open(badge_t client_badge, ipc_msg_t *ipc_msg,
         fs_debug_trace_fswrapper(
                 "new_fd=%d, flags=0%o, path=%s\n", new_fd, flags, path);
 
+        /* Check the fr permission and open flag if necessary */
         /*
          * If O_CREAT and O_EXCL are set, open() shall fail if the file exists.
          */
@@ -156,6 +158,7 @@ int fs_wrapper_open(badge_t client_badge, ipc_msg_t *ipc_msg,
         }
 
         fr->open.new_fd = AT_FDROOT;
+        /* Use server_ops to open the file */
         ret = server_ops.open(path,
                               flags,
                               mode,
@@ -213,8 +216,11 @@ int fs_wrapper_open(badge_t client_badge, ipc_msg_t *ipc_msg,
                 entry_off = 0;
         }
 
+        /* Check if the vnode_id is in rb tree.*/
         vnode = get_fs_vnode_by_id(vnode_id);
         if (NULL != vnode) {
+                /* If yes, then close the newly opened vnode and increment the refcnt of
+                 * present vnode */
                 /* Assign new entry to existing vnode, close newly opened struct
                  */
                 inc_ref_fs_vnode(vnode);
@@ -227,6 +233,7 @@ int fs_wrapper_open(badge_t client_badge, ipc_msg_t *ipc_msg,
                 server_ops.close(
                         vnode_private, (vnode_type == FS_NODE_DIR), false);
         } else {
+                /* If not, create a new vnode and insert it into the tree. */
                 vnode = alloc_fs_vnode(
                         vnode_id, vnode_type, vnode_size, vnode_private);
                 if (vnode == NULL) {
@@ -245,6 +252,8 @@ int fs_wrapper_open(badge_t client_badge, ipc_msg_t *ipc_msg,
                              vnode);
         }
 
+        /* Alloc a server_entry and assign the vnode and client generated
+         * fd(fr->xxx) to it (Part3 Server fid)*/
         /* After server handling the open request, mapping new_fd to fid */
         ret = fs_wrapper_set_server_entry(client_badge, new_fd, entry_id);
         if (ret < 0) {
@@ -255,12 +264,15 @@ int fs_wrapper_open(badge_t client_badge, ipc_msg_t *ipc_msg,
 
         fs_debug_trace_fswrapper("entry_id=%d\n", entry_id);
 
+        /* Return the client fd */
         return new_fd;
+        /* Lab 5 TODO End (Part 4)*/
 }
 
 int fs_wrapper_close(badge_t client_badge, ipc_msg_t *ipc_msg,
                      struct fs_request *fr)
 {
+        /* Lab 5 TODO Begin (Part 4)*/
         int entry_id;
         struct fs_vnode *vnode;
         fs_debug_trace_fswrapper("fd=%d\n", fr->close.fd);
@@ -274,7 +286,10 @@ int fs_wrapper_close(badge_t client_badge, ipc_msg_t *ipc_msg,
         }
 
         vnode = server_entrys[entry_id]->vnode;
+        /* Decrement the server_entry refcnt */
         server_entrys[entry_id]->refcnt--;
+        /* If refcnt is 0, free the server_entry and decrement the vnode
+         * refcnt*/
         if (server_entrys[entry_id]->refcnt == 0) {
                 free_entry(entry_id);
                 fs_wrapper_clear_server_entry(client_badge, entry_id);
@@ -289,6 +304,7 @@ int fs_wrapper_close(badge_t client_badge, ipc_msg_t *ipc_msg,
         /* Revoke vnode, if refcnt == 0 */
 
         return 0;
+        /* Lab 5 TODO End (Part 4)*/
 }
 
 int fs_wrapper_chmod(badge_t client_badge, ipc_msg_t *ipc_msg,
@@ -384,6 +400,7 @@ out:
 
 int fs_wrapper_read(ipc_msg_t *ipc_msg, struct fs_request *fr)
 {
+        /* Lab 5 TODO Begin (Part 4)*/
         int fd;
         char *buf;
         off_t offset;
@@ -407,8 +424,10 @@ int fs_wrapper_read(ipc_msg_t *ipc_msg, struct fs_request *fr)
 
         offset = (off_t)server_entrys[fd]->offset;
 
+        /* Use server_ops to read the file into buf. */
         ret = __fs_wrapper_read_core(server_entrys[fd], buf, size, offset);
 
+        /* You also should update the offset of the server_entry offset */
         /* Update server_entry and vnode metadata */
         if (ret > 0) {
                 server_entrys[fd]->offset += ret;
@@ -416,6 +435,7 @@ int fs_wrapper_read(ipc_msg_t *ipc_msg, struct fs_request *fr)
 
         pthread_mutex_unlock(&server_entrys[fd]->lock);
         return ret;
+        /* Lab 5 TODO End (Part 4)*/
 }
 
 int fs_wrapper_pread(ipc_msg_t *ipc_msg, struct fs_request *fr)
@@ -580,6 +600,7 @@ int fs_wrapper_pwrite(ipc_msg_t *ipc_msg, struct fs_request *fr)
 
 int fs_wrapper_write(ipc_msg_t *ipc_msg, struct fs_request *fr)
 {
+        /* Lab 5 TODO Begin (Part 4)*/
         int fd;
         char *buf;
         size_t size;
@@ -611,8 +632,10 @@ int fs_wrapper_write(ipc_msg_t *ipc_msg, struct fs_request *fr)
                 offset = (off_t)server_entrys[fd]->vnode->size;
         }
 
+        /* Use server_ops to write the file from buf. */
         ret = __fs_wrapper_write_core(server_entrys[fd], buf, size, offset);
 
+        /* You also should update the offset of the server_entry offset */
         /* Update server_entry and vnode metadata */
         if (ret > 0) {
                 /*
@@ -633,10 +656,13 @@ int fs_wrapper_write(ipc_msg_t *ipc_msg, struct fs_request *fr)
 
         pthread_mutex_unlock(&server_entrys[fd]->lock);
         return ret;
+        /* Lab 5 TODO End (Part 4)*/
 }
 
 int fs_wrapper_lseek(ipc_msg_t *ipc_msg, struct fs_request *fr)
 {
+        /* Lab 5 TODO Begin (Part 4)*/
+        /* Check the posix standard. Adjust the server_entry content.*/
         int fd;
         off_t offset;
         int whence;
@@ -671,6 +697,7 @@ int fs_wrapper_lseek(ipc_msg_t *ipc_msg, struct fs_request *fr)
         fr->lseek.ret = target_off;
 
         return 0;
+        /* Lab 5 TODO End (Part 4)*/
 }
 
 int fs_wrapper_ftruncate(ipc_msg_t *ipc_msg, struct fs_request *fr)

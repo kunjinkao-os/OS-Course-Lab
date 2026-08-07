@@ -32,6 +32,7 @@
 
 /* See more details about the bias in registers.h */
 .macro	exception_enter
+	/* LAB 3 TODO BEGIN */
 	sub	sp, sp, #ARCH_EXEC_CONT_SIZE
 	stp	x0, x1, [sp, #16 * 0]
 	stp	x2, x3, [sp, #16 * 1]
@@ -48,19 +49,25 @@
 	stp	x24, x25, [sp, #16 * 12]
 	stp	x26, x27, [sp, #16 * 13]
 	stp	x28, x29, [sp, #16 * 14]
+	/* LAB 3 TODO END */
 	mrs	x21, sp_el0
 	mrs	x22, elr_el1
 	mrs	x23, spsr_el1
+	/* LAB 3 TODO BEGIN */
 	stp	x30, x21, [sp, #16 * 15]
 	stp	x22, x23, [sp, #16 * 16]
+	/* LAB 3 TODO END */
 .endm
 
 .macro	exception_exit
+	/* LAB 3 TODO BEGIN */
 	ldp	x22, x23, [sp, #16 * 16]
 	ldp	x30, x21, [sp, #16 * 15] 
+	/* LAB 3 TODO END */
 	msr	sp_el0, x21
 	msr	elr_el1, x22
 	msr	spsr_el1, x23
+	/* LAB 3 TODO BEGIN */
 	ldp	x0, x1, [sp, #16 * 0]
 	ldp	x2, x3, [sp, #16 * 1]
 	ldp	x4, x5, [sp, #16 * 2]
@@ -78,12 +85,15 @@
 	ldp	x28, x29, [sp, #16 * 14]
 
 	add	sp, sp, #ARCH_EXEC_CONT_SIZE
+	/* LAB 3 TODO END */
 	eret
 .endm
 
 .macro switch_to_cpu_stack
 	mrs     x24, TPIDR_EL1
+	/* LAB 3 TODO BEGIN */
 	add	x24, x24, #OFFSET_LOCAL_CPU_STACK
+	/* LAB 3 TODO END */
 	ldr	x24, [x24]
 	mov	sp, x24
 .endm
@@ -124,6 +134,7 @@
 /* el1_vector should be set in VBAR_EL1. The last 11 bits of VBAR_EL1 are reserved. */
 .align	11
 EXPORT(el1_vector)
+	/* LAB 3 TODO BEGIN */
 	exception_entry	sync_el1t		// Synchronous EL1t
 	exception_entry	irq_el1t		// IRQ EL1t
 	exception_entry	fiq_el1t		// FIQ EL1t
@@ -143,6 +154,7 @@ EXPORT(el1_vector)
 	exception_entry	irq_el0_32		// IRQ 32-bit EL0
 	exception_entry	fiq_el0_32		// FIQ 32-bit EL0
 	exception_entry	error_el0_32		// Error 32-bit EL0
+	/* LAB 3 TODO END */
 
 /*
  * The selected stack pointer can be indicated by a suffix to the Exception Level:
@@ -174,15 +186,20 @@ fiq_el1h:
 error_el1t:
 error_el1h:
 sync_el1t:
+	/* LAB 3 TODO BEGIN */
 	bl unexpected_handler
+	/* LAB 3 TODO END */
 
 sync_el1h:
 	exception_enter
 	mov	x0, #SYNC_EL1h
 	mrs	x1, esr_el1
 	mrs	x2, elr_el1
+	/* LAB 3 TODO BEGIN */
+	/* jump to handle_entry_c, store the return value as the ELR_EL1 */
 	bl	handle_entry_c
 	str     x0, [sp, #16 * 16] /* store the return value as the ELR_EL1 */
+	/* LAB 3 TODO END */
 	exception_exit
 
 sync_el0_64:

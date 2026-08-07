@@ -20,6 +20,12 @@ struct list_head fsm_client_cap_table;
 /* Return mount_id */
 int fsm_set_client_cap(badge_t client_badge, cap_t cap)
 {
+        /* Lab 5 TODO Begin (Part 1) */
+        /* HINT: the fsm_client_cap_node is organized with a linked list which
+         * represents a mapping between (client_badge, fs_cap) -> mount_id. You
+         * should allocate the node if it's not present or get the
+         * fs_client_cap_node. Iterate through the cap_table and place the cap
+         * in an empty slot of the cap_table and returns its ordinal.*/
         struct fsm_client_cap_node *n;
 
         for_each_in_list (
@@ -46,11 +52,15 @@ int fsm_set_client_cap(badge_t client_badge, cap_t cap)
         list_append(&n->node, &fsm_client_cap_table);
 
         return 0;
+        /* Lab 5 TODO End (Part 1) */
 }
 
 /* Return mount_id if record exists, otherwise -1 */
 int fsm_get_client_cap(badge_t client_badge, cap_t cap)
 {
+        /* Lab 5 TODO Begin (Part 1) */
+        /* HINT: Perform the same behavior as fsm_set_client_cap and gets the
+         * cap from the cap_table if it exists. */
         struct fsm_client_cap_node *n;
         int i;
 
@@ -62,4 +72,5 @@ int fsm_get_client_cap(badge_t client_badge, cap_t cap)
                                         return i;
 
         return -1;
+        /* Lab 5 TODO End (Part 1) */
 }

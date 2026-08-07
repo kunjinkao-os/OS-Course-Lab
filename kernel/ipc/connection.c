@@ -112,10 +112,14 @@ static int register_server(struct thread *server, unsigned long ipc_routine,
          * No need to validate such address because the server just
          * kill itself if the address is illegal.
          */
+        /* LAB 4 TODO BEGIN (exercise 7) */
+        /* Complete the config structure, replace xxx with actual values */
+        /* Record the ipc_routine_entry  */
         config->declared_ipc_routine_entry = ipc_routine;
 
         /* Record the registration cb thread */
         config->register_cb_thread = register_cb_thread;
+        /* LAB 4 TODO END (exercise 7) */
 
         register_cb_config = kmalloc(sizeof(*register_cb_config));
         if (!register_cb_config) {
@@ -259,10 +263,13 @@ static int create_connection(struct thread *client, struct thread *server,
          */
         conn->client_badge = current_cap_group->badge;
         conn->client_pid = current_cap_group->pid;
+        /* LAB 4 TODO BEGIN (exercise 7) */
+        /* Complete the following fields of shm, replace xxx with actual values */
         conn->shm.client_shm_uaddr = shm_addr_client;
         conn->shm.shm_size = shm_size;
         conn->shm.shm_cap_in_client = shm_cap_client;
         conn->shm.shm_cap_in_server = shm_cap_server;
+        /* LAB 4 TODO END (exercise 7) */
         lock_init(&conn->ownership);
         /* Initialize the connection (end) */
 
@@ -384,10 +391,17 @@ static void ipc_thread_migrate_to_server(struct ipc_connection *conn,
         /* Pass the scheduling context */
         target->thread_ctx->sc = current_thread->thread_ctx->sc;
 
+        /* LAB 4 TODO BEGIN (exercise 7) */
+        /*
+         * Complete the arguments in the following function calls,
+         * replace xxx with actual arguments.
+         */
+        /* Note: see how stack address and ip are get in sys_ipc_register_cb_return */
         /* Set the target thread SP/IP/arguments */
         arch_set_thread_stack(target, handler_config->ipc_routine_stack);
         arch_set_thread_next_ip(target, handler_config->ipc_routine_entry);
 
+        /* see server_handler type in uapi/ipc.h */
         // see server_handler type in uapi/ipc.h
         arch_set_thread_arg0(target, shm_addr);
         arch_set_thread_arg1(target, shm_size);
@@ -399,6 +413,7 @@ static void ipc_thread_migrate_to_server(struct ipc_connection *conn,
 #else /* CHCORE_OPENTRUSTEE */
         arch_set_thread_arg3(target, conn->client_badge);
 #endif /* CHCORE_OPENTRUSTEE */
+        /* LAB 4 TODO END (exercise 7) */
         set_thread_arch_spec_state_ipc(target);
 
         /* Switch to the target thread */
@@ -531,13 +546,21 @@ cap_t sys_register_client(cap_t server_cap, unsigned long shm_config_ptr)
         /* Mark current_thread as TS_BLOCKING */
         thread_set_ts_blocking(current_thread);
 
+        /* LAB 4 TODO BEGIN (exercise 7) */
+        /* Set target thread SP/IP/arg, replace xxx with actual arguments */
+        /* Note: see how stack address and ip are get in sys_register_server */
         /* Set target thread SP/IP/arg */
         arch_set_thread_stack(register_cb_thread,
                               register_cb_config->register_cb_stack);
         arch_set_thread_next_ip(register_cb_thread,
                                 register_cb_config->register_cb_entry);
+        /*
+         * Note: see the parameter of register_cb function defined
+         * in user/chcore-libc/musl-libc/src/chcore-port/ipc.c
+         */
         arch_set_thread_arg0(register_cb_thread,
                              server_config->declared_ipc_routine_entry);
+        /* LAB 4 TODO END (exercise 7) */
         obj_put(server);
 
         /* Pass the scheduling context */
@@ -910,7 +933,10 @@ int sys_ipc_register_cb_return(cap_t server_handler_thread_cap,
         /* Initialize the ipc configuration for the handler_thread (end) */
 
         /* Fill the server information in the IPC connection. */
+        /* LAB 4 TODO BEGIN (exercise 7) */
+        /* Complete the server_shm_uaddr field of shm, replace xxx with the actual value */
         conn->shm.server_shm_uaddr = server_shm_addr;
+        /* LAB 4 TODO END (exercise 7) */
         conn->server_handler_thread = ipc_server_handler_thread;
         conn->state = CONN_VALID;
         conn->current_client_thread = NULL;

@@ -470,6 +470,9 @@ out_unlock:
 /* This function should be surrounded with the vmspace_lock. */
 struct vmregion *find_vmr_for_va(struct vmspace *vmspace, vaddr_t addr)
 {
+        /* LAB 2 TODO 6 BEGIN */
+        /* Hint: Find the corresponding vmr for @addr in @vmspace */
+        /* BLANK BEGIN */
         struct vmregion *vmr;
         struct rb_node *node;
 
@@ -481,6 +484,8 @@ struct vmregion *find_vmr_for_va(struct vmspace *vmspace, vaddr_t addr)
 
         vmr = rb_entry(node, struct vmregion, tree_node);
         return vmr;
+        /* BLANK END */
+        /* LAB 2 TODO 6 END */
 }
 
 /*

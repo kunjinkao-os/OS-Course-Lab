@@ -40,25 +40,36 @@ void plat_timer_init(void)
 	/* Since QEMU only emulate the generic timer, we use the generic timer here */
 	asm volatile ("mrs %0, cntpct_el0":"=r" (cntp_init));
 	kdebug("timer init cntpct_el0 = %lu\n", cntp_init);
+	/* LAB 4 TODO BEGIN (exercise 5) */
+	/* Note: you should add three lines of code. */
+	/* Read system register cntfrq_el0 to cntp_freq*/
 	asm volatile ("mrs %0, cntfrq_el0":"=r" (cntp_freq));
 	kdebug("timer init cntfrq_el0 = %lu\n", cntp_freq);
 
+	/* Calculate the cntp_tval based on TICK_MS and cntp_freq */
 	/* Calculate the tv */
 	cntp_tval = (cntp_freq * TICK_MS / 1000);
 	tick_per_us = cntp_freq / 1000 / 1000;
 	kinfo("CPU freq %lu, set timer %lu\n", cntp_freq, cntp_tval);
 
+	/* Write cntp_tval to the system register cntp_tval_el0 */
 	/* set the timervalue here */
 	asm volatile ("msr cntp_tval_el0, %0"::"r" (cntp_tval));
+	/* LAB 4 TODO END (exercise 5) */
 	asm volatile ("mrs %0, cntp_tval_el0":"=r" (count_down));
 	kdebug("timer init cntp_tval_el0 = %lu\n", count_down);
 
 	/* Enable CNTPNSIRQ and CNTVIRQ */
 	put32(core_timer_irqcntl[cpuid], INT_SRC_TIMER1 | INT_SRC_TIMER3);
 
+	/* LAB 4 TODO BEGIN (exercise 5) */
+	/* Note: you should add two lines of code. */
+	/* Calculate the value of timer_ctl */
 	/* Set the control register */
 	timer_ctl = 0 << 1 | 1;	/* IMASK = 0 ENABLE = 1 */
+	/* Write timer_ctl to the control register (cntp_ctl_el0) */
 	asm volatile ("msr cntp_ctl_el0, %0"::"r" (timer_ctl));
+	/* LAB 4 TODO END (exercise 5) */
 	asm volatile ("mrs %0, cntp_ctl_el0":"=r" (timer_ctl));
 	kdebug("timer init cntp_ctl_el0 = %lu\n", timer_ctl);
 	/* enable interrupt controller */

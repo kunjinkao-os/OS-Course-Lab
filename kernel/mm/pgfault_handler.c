@@ -201,6 +201,9 @@ int handle_trans_fault(struct vmspace *vmspace, vaddr_t fault_addr)
                          * Not committed before. Then, allocate the physical
                          * page.
                          */
+                        /* LAB 2 TODO 7 BEGIN */
+                        /* BLANK BEGIN */
+                        /* Hint: Allocate a physical page and clear it to 0. */
                         void *new_va = get_pages(0);
                         long rss = 0;
                         if (new_va == NULL) {
@@ -211,6 +214,7 @@ int handle_trans_fault(struct vmspace *vmspace, vaddr_t fault_addr)
                         BUG_ON(pa == 0);
                         /* Clear to 0 for the newly allocated page */
                         memset((void *)phys_to_virt(pa), 0, PAGE_SIZE);
+                        /* BLANK END */
                         /*
                          * Record the physical page in the radix tree:
                          * the offset is used as index in the radix tree
@@ -220,6 +224,7 @@ int handle_trans_fault(struct vmspace *vmspace, vaddr_t fault_addr)
 
                         /* Add mapping in the page table */
                         lock(&vmspace->pgtbl_lock);
+                        /* BLANK BEGIN */
                         map_range_in_pgtbl(vmspace->pgtbl,
                                            fault_addr,
                                            pa,
@@ -227,6 +232,7 @@ int handle_trans_fault(struct vmspace *vmspace, vaddr_t fault_addr)
                                            perm,
                                            &rss);
                         vmspace->rss += rss;
+                        /* BLANK END */
                         unlock(&vmspace->pgtbl_lock);
                 } else {
                         /*
@@ -254,6 +260,7 @@ int handle_trans_fault(struct vmspace *vmspace, vaddr_t fault_addr)
                                 /* Add mapping in the page table */
                                 long rss = 0;
                                 lock(&vmspace->pgtbl_lock);
+                                /* BLANK BEGIN */
                                 map_range_in_pgtbl(vmspace->pgtbl,
                                                    fault_addr,
                                                    pa,
@@ -261,6 +268,8 @@ int handle_trans_fault(struct vmspace *vmspace, vaddr_t fault_addr)
                                                    perm,
                                                    &rss);
                                 vmspace->rss += rss;
+                                /* BLANK END */
+                                /* LAB 2 TODO 7 END */
                                 unlock(&vmspace->pgtbl_lock);
                         }
                 }

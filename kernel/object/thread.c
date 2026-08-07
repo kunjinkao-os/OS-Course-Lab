@@ -240,6 +240,8 @@ void create_root_thread(void)
                        sizeof(data));
                 flags = (unsigned int)le32_to_cpu(*(u32 *)data);
 
+                /* LAB 3 TODO BEGIN */
+                /* Get offset, vaddr, filesz, memsz from image*/
                 memcpy(data,
                        (void *)((unsigned long)&binary_procmgr_bin_start
                                 + ROOT_PHDR_OFF + i * ROOT_PHENT_SIZE
@@ -267,8 +269,10 @@ void create_root_thread(void)
                                 + PHDR_MEMSZ_OFF),
                        sizeof(data));
                 memsz = (unsigned long)le64_to_cpu(*(u64 *)data);
+                /* LAB 3 TODO END */
 
                 struct pmobject *segment_pmo;
+                /* LAB 3 TODO BEGIN */
                 size_t pmo_size = ROUND_UP(memsz, PAGE_SIZE);
 
                 vaddr_t segment_content_kvaddr =
@@ -285,7 +289,10 @@ void create_root_thread(void)
                                  0,
                                  &segment_pmo,
                                  PMO_ALL_RIGHTS);
+                /* LAB 3 TODO END */
                 BUG_ON(ret < 0);
+                /* LAB 3 TODO BEGIN */
+                /* Copy elf file contents into memory*/
                 kfree((void *)phys_to_virt(segment_pmo->start));
 #if CHCORE_ARCH_X86_64
                 // See comments of embedded_bin_virt_to_phys
@@ -296,13 +303,17 @@ void create_root_thread(void)
                 segment_pmo->start = virt_to_phys(segment_content_kvaddr);
                 segment_pmo->size = pmo_size;
 #endif
+                /* LAB 3 TODO END */
                 unsigned vmr_flags = 0;
+                /* LAB 3 TODO BEGIN */
+                /* Set flags*/
                 if (flags & PHDR_FLAGS_R)
                         vmr_flags |= VMR_READ;
                 if (flags & PHDR_FLAGS_W)
                         vmr_flags |= VMR_WRITE;
                 if (flags & PHDR_FLAGS_X)
                         vmr_flags |= VMR_EXEC;
+                /* LAB 3 TODO END */
 
                 ret = vmspace_map_range(init_vmspace,
                                         vaddr,

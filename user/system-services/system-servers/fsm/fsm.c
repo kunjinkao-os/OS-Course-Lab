@@ -150,6 +150,10 @@ int fsm_mount_fs(const char *path, const char *mount_point)
         }
 
         /* Connect to the FS that we mount now. */
+        /* Lab 5 TODO Begin (Part 1) */
+        /* HINT: fsm has the ability to request page_cache syncing and mount and
+         * unmount request to the corresponding filesystem. Register an ipc client for each node*/
+        /* mp_node->_fs_ipc_struct = ipc_register_client(...) */
         mp_node->_fs_ipc_struct = ipc_register_client(mp_node->fs_cap);
 
         if (mp_node->_fs_ipc_struct == NULL) {
@@ -164,6 +168,7 @@ int fsm_mount_fs(const char *path, const char *mount_point)
         fs_num++;
         ret = 0;
         pthread_rwlock_unlock(&mount_point_infos_rwlock);
+        /* Lab 5 TODO End (Part 1) */
 
 out:
         return ret;
@@ -328,6 +333,18 @@ out_fail:
 int fsm_path_ops(ipc_msg_t *fsm_ipc_msg, struct fsm_request *fsm_req,
                  badge_t client_badge, bool *ret_with_cap)
 {
+        /* Lab 5 TODO Begin (Part 1) */
+        /* HINT: MountInfo is the info node that records each mount
+         * point and actual path*/
+        /* It also contains a ipc_client that delegates the actual
+         * filesystem. PARSE_PATH is the actual vfs layer that does the
+         * path traversing */
+        /* e.g. /mnt/ -> /dev/sda1 /mnt/1 -> /dev/sda2 */
+        /* You should use the get_mount_point function to get
+         * mount_info. for example get_mount_info will return
+         * mount_info(/mnt/1/123) node that represents /dev/sda2.*/
+        /* You should use get_mount_info to get the mount_info and set
+         * the fsm_req ipc_msg with mount_id*/
         int ret, req, flags;
         struct fs_request *client_fs_req, *server_fs_req;
         ipc_msg_t *fs_ipc_msg;
@@ -473,6 +490,7 @@ int fsm_path_ops(ipc_msg_t *fsm_ipc_msg, struct fsm_request *fsm_req,
 out_free:
         ipc_destroy_msg(fs_ipc_msg);
 out:
+        /* Lab 5 TODO End (Part 1) */
         return ret;
 }
 

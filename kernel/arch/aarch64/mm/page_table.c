@@ -298,6 +298,13 @@ void free_page_table(void *pgtbl)
  */
 int query_in_pgtbl(void *pgtbl, vaddr_t va, paddr_t *pa, pte_t **entry)
 {
+        /* LAB 2 TODO 4 BEGIN */
+        /*
+         * Hint: Walk through each level of page table using `get_next_ptp`,
+         * return the pa and pte until a L2/L3 block or page, return
+         * `-ENOMAPPING` if the va is not mapped.
+         */
+        /* BLANK BEGIN */
         /* On aarch64, l0 is the highest level page table */
         ptp_t *l0_ptp, *l1_ptp, *l2_ptp, *l3_ptp;
         ptp_t *phys_page;
@@ -341,11 +348,23 @@ int query_in_pgtbl(void *pgtbl, vaddr_t va, paddr_t *pa, pte_t **entry)
         if (entry)
                 *entry = pte;
         return 0;
+        /* BLANK END */
+        /* LAB 2 TODO 4 END */
 }
 
 static int map_range_in_pgtbl_common(void *pgtbl, vaddr_t va, paddr_t pa, size_t len,
                        vmr_prop_t flags, int kind, long *rss)
 {
+        /* LAB 2 TODO 4 BEGIN */
+        /*
+         * Hint: Walk through each level of page table using `get_next_ptp`,
+         * create new page table page if necessary, fill in the final level
+         * pte with the help of `set_pte_flags`. Iterate until all pages are
+         * mapped.
+         * Since we are adding new mappings, there is no need to flush TLBs.
+         * Return 0 on success.
+         */
+        /* BLANK BEGIN */
         s64 total_page_cnt;
         ptp_t *l0_ptp, *l1_ptp, *l2_ptp, *l3_ptp;
         pte_t *pte;
@@ -404,6 +423,8 @@ static int map_range_in_pgtbl_common(void *pgtbl, vaddr_t va, paddr_t pa, size_t
 
         /* Since we are adding new mappings, there is no need to flush TLBs. */
         return 0;
+        /* BLANK END */
+        /* LAB 2 TODO 4 END */
 }
 
 /* Map vm range in kernel */
@@ -465,6 +486,16 @@ static void recycle_pgtable_entry(ptp_t *l0_ptp, ptp_t *l1_ptp, ptp_t *l2_ptp,
 
 int unmap_range_in_pgtbl(void *pgtbl, vaddr_t va, size_t len, long *rss)
 {
+        /* LAB 2 TODO 4 BEGIN */
+        /*
+         * Hint: Walk through each level of page table using `get_next_ptp`,
+         * mark the final level pte as invalid. Iterate until all pages are
+         * unmapped.
+         * You don't need to flush tlb here since tlb is now flushed after
+         * this function is called.
+         * Return 0 on success.
+         */
+        /* BLANK BEGIN */
         s64 total_page_cnt; // must be signed
         s64 left_page_cnt_in_current_level;
         ptp_t *l0_ptp, *l1_ptp, *l2_ptp, *l3_ptp;
@@ -547,10 +578,20 @@ int unmap_range_in_pgtbl(void *pgtbl, vaddr_t va, size_t len, long *rss)
         isb();
 
         return 0;
+        /* BLANK END */
+        /* LAB 2 TODO 4 END */
 }
 
 int mprotect_in_pgtbl(void *pgtbl, vaddr_t va, size_t len, vmr_prop_t flags)
 {
+        /* LAB 2 TODO 4 BEGIN */
+        /*
+         * Hint: Walk through each level of page table using `get_next_ptp`,
+         * modify the permission in the final level pte using `set_pte_flags`.
+         * The `kind` argument of `set_pte_flags` should always be `USER_PTE`.
+         * Return 0 on success.
+         */
+        /* BLANK BEGIN */
         s64 total_page_cnt; // must be signed
         ptp_t *l0_ptp, *l1_ptp, *l2_ptp, *l3_ptp;
         pte_t *pte;
@@ -606,6 +647,8 @@ int mprotect_in_pgtbl(void *pgtbl, vaddr_t va, size_t len, vmr_prop_t flags)
         }
 
         return 0;
+        /* BLANK END */
+        /* LAB 2 TODO 4 END */
 }
 
 void parse_pte_to_common(pte_t *pte, unsigned int level,

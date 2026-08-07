@@ -120,6 +120,14 @@ struct thread *find_runnable_thread(struct list_head *thread_list)
 {
         struct thread *thread;
 
+        /* LAB 4 TODO BEGIN (exercise 3) */
+        /* Tip 1: use for_each_in_list to iterate the thread list */
+        /*
+         * Tip 2: Find the first thread in the ready queue that
+         * satisfies (!thread->thread_ctx->is_suspended &&
+         * (thread->thread_ctx->kernel_stack_state == KS_FREE
+         * || thread == current_thread))
+         */
         for_each_in_list (
                 thread, struct thread, ready_queue_node, thread_list) {
                 if (!thread_is_suspend(thread)
@@ -129,6 +137,7 @@ struct thread *find_runnable_thread(struct list_head *thread_list)
                 }
         }
         return NULL;
+        /* LAB 4 TODO END (exercise 3) */
 }
 
 /* Global interfaces */
@@ -451,7 +460,11 @@ int sched_init(struct sched_ops *sched_ops)
 void sys_yield(void)
 {
         current_thread->thread_ctx->sc->budget = 0;
+        /* LAB 4 TODO BEGIN (exercise 4) */
+        /* Trigger sched */
+        /* Note: you should just add a function call (one line of code) */
         sched();
+        /* LAB 4 TODO END (exercise 4) */
         eret_to_thread(switch_context());
 }
 

@@ -93,6 +93,7 @@ void fs_vnode_init(void)
 struct fs_vnode *alloc_fs_vnode(ino_t id, enum fs_vnode_type type, off_t size,
                                 void *private)
 {
+        /* Lab 5 TODO Begin (Part 2) */
         struct fs_vnode *ret = (struct fs_vnode *)malloc(sizeof(*ret));
         if (ret == NULL) {
                 return NULL;
@@ -118,6 +119,7 @@ struct fs_vnode *alloc_fs_vnode(ino_t id, enum fs_vnode_type type, off_t size,
         pthread_rwlock_init(&ret->rwlock, NULL);
 
         return ret;
+        /* Lab 5 TODO End (Part 2) */
 }
 
 void push_fs_vnode(struct fs_vnode *n)
@@ -136,22 +138,30 @@ void pop_free_fs_vnode(struct fs_vnode *n)
 
 struct fs_vnode *get_fs_vnode_by_id(ino_t vnode_id)
 {
+        /* Lab 5 TODO Begin (Part 2) */
+        /* Use the rb_xxx api */
         struct rb_node *node =
                 rb_search(fs_vnode_list, &vnode_id, comp_vnode_key);
         if (node == NULL)
                 return NULL;
         return rb_entry(node, struct fs_vnode, node);
+        /* Lab 5 TODO End (Part 2) */
 }
 
 /* refcnt for vnode */
 int inc_ref_fs_vnode(void *n)
 {
+        /* Lab 5 TODO Begin (Part 2) */
+        /* Private is a fs_vnode */
         ((struct fs_vnode *)n)->refcnt++;
         return 0;
+        /* Lab 5 TODO End (Part 2) */
 }
 
 int dec_ref_fs_vnode(void *node)
 {
+        /* Lab 5 TODO Begin (Part 2) */
+        /* Private is a fs_vnode Decrement its refcnt */
         int ret;
         struct fs_vnode *n = (struct fs_vnode *)node;
 
@@ -171,4 +181,5 @@ int dec_ref_fs_vnode(void *node)
         }
 
         return 0;
+        /* Lab 5 TODO End (Part 2) */
 }

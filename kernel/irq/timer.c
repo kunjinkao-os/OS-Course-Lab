@@ -130,6 +130,8 @@ void handle_timer_irq(void)
         time_states[smp_get_cpu_id()].next_expire = current_tick + tick_delta;
         plat_handle_timer_irq(tick_delta);
 
+        /* LAB 4 TODO BEGIN (exercise 6) */
+        /* Decrease the budget of current thread by 1 if current thread is not NULL */
         /* Current running thread in current_threads[cpuid] */
         if (current_thread) {
                 BUG_ON(!current_thread->thread_ctx->sc);
@@ -138,6 +140,8 @@ void handle_timer_irq(void)
         } else {
                 kdebug("Timer: system not runnig!\n");
         }
+        /* Then call sched to trigger scheduling */
+        /* LAB 4 TODO END (exercise 6) */
 }
 
 /*

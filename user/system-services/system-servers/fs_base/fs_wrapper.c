@@ -112,6 +112,7 @@ void init_fs_wrapper(void)
 /* Get (client_badge, fd) -> fid(server_entry) mapping */
 int fs_wrapper_get_server_entry(badge_t client_badge, int fd)
 {
+        /* Lab 5 TODO Begin (Part 3)*/
         struct server_entry_node *n;
 
         /* Stable fd number, need no translating */
@@ -133,11 +134,17 @@ int fs_wrapper_get_server_entry(badge_t client_badge, int fd)
 
         pthread_spin_unlock(&server_entry_mapping_lock);
         return -1;
+        /* Lab 5 TODO End (Part 3)*/
 }
 
 /* Set (client_badge, fd) -> fid(server_entry) mapping */
 int fs_wrapper_set_server_entry(badge_t client_badge, int fd, int fid)
 {
+        /* Lab 5 TODO Begin (Part 3)*/
+        /*
+         * Check if client_badge already involved,
+         * create new server_entry_node if not.
+         */
         struct server_entry_node *private_iter;
         int ret = 0;
 
@@ -177,6 +184,7 @@ int fs_wrapper_set_server_entry(badge_t client_badge, int fd, int fid)
 out:
         pthread_spin_unlock(&server_entry_mapping_lock);
         return ret;
+        /* Lab 5 TODO End (Part 3)*/
 }
 
 void fs_wrapper_clear_server_entry(badge_t client_badge, int fid)

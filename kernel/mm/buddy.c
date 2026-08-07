@@ -47,6 +47,12 @@ static struct page *get_buddy_chunk(struct phys_mem_pool *pool,
 static struct page *split_chunk(struct phys_mem_pool *pool, int order,
                                 struct page *chunk)
 {
+        /* LAB 2 TODO 1 BEGIN */
+        /*
+         * Hint: Recursively put the buddy of current chunk into
+         * a suitable free list.
+         */
+        /* BLANK BEGIN */
         struct page *buddy_chunk;
         struct list_head *free_list;
 
@@ -81,12 +87,20 @@ static struct page *split_chunk(struct phys_mem_pool *pool, int order,
 
         /* Continue to split current chunk (@chunk). */
         return split_chunk(pool, order, chunk);
+        /* BLANK END */
+        /* LAB 2 TODO 1 END */
 }
 
 /* The most recursion level of merge_chunk is decided by the macro of
  * BUDDY_MAX_ORDER. */
 static struct page *merge_chunk(struct phys_mem_pool *pool, struct page *chunk)
 {
+        /* LAB 2 TODO 1 BEGIN */
+        /*
+         * Hint: Recursively merge current chunk with its buddy
+         * if possible.
+         */
+        /* BLANK BEGIN */
         struct page *buddy_chunk;
 
         /* The @chunk has already been the largest one. */
@@ -122,6 +136,8 @@ static struct page *merge_chunk(struct phys_mem_pool *pool, struct page *chunk)
 
         /* Keeping merging. */
         return merge_chunk(pool, chunk);
+        /* BLANK END */
+        /* LAB 2 TODO 1 END */
 }
 
 /*
@@ -185,6 +201,12 @@ struct page *buddy_get_pages(struct phys_mem_pool *pool, int order)
 
         lock(&pool->buddy_lock);
 
+        /* LAB 2 TODO 1 BEGIN */
+        /*
+         * Hint: Find a chunk that satisfies the order requirement
+         * in the free lists, then split it if necessary.
+         */
+        /* BLANK BEGIN */
         /* Search a chunk (with just enough size) in the free lists. */
         for (cur_order = order; cur_order < BUDDY_MAX_ORDER; ++cur_order) {
                 free_list = &(pool->free_lists[cur_order].free_list);
@@ -208,6 +230,8 @@ struct page *buddy_get_pages(struct phys_mem_pool *pool, int order)
          * which can meet the required size.
          */
         page = split_chunk(pool, order, page);
+        /* BLANK END */
+        /* LAB 2 TODO 1 END */
 
 out:
         unlock(&pool->buddy_lock);
@@ -221,6 +245,12 @@ void buddy_free_pages(struct phys_mem_pool *pool, struct page *page)
 
         lock(&pool->buddy_lock);
 
+        /* LAB 2 TODO 1 BEGIN */
+        /*
+         * Hint: Merge the chunk with its buddy and put it into
+         * a suitable free list.
+         */
+        /* BLANK BEGIN */
         BUG_ON(page->allocated == 0);
         /* Mark the chunk @page as free. */
         page->allocated = 0;
@@ -232,6 +262,8 @@ void buddy_free_pages(struct phys_mem_pool *pool, struct page *page)
         free_list = &(pool->free_lists[order].free_list);
         list_add(&page->node, free_list);
         pool->free_lists[order].nr_free += 1;
+        /* BLANK END */
+        /* LAB 2 TODO 1 END */
 
         unlock(&pool->buddy_lock);
 }
