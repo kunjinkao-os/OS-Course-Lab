@@ -31,6 +31,8 @@ char boot_cpu_stack[PLAT_CPU_NUMBER][INIT_STACK_SIZE] ALIGN(4096);
  */
 #define NOT_BSS (0xBEEFUL)
 long secondary_boot_flag[PLAT_CPU_NUMBER] = {NOT_BSS};
+/*设计细节：clear_bss_flag 被放在非 .bss 区（有初始值），
+ 并声明为 volatile，以确保编译器不优化掉读取；在 MMU 未开启的早期阶段，次核直接用物理地址通过 ldr 读取该内存位置。*/
 volatile u64 clear_bss_flag = NOT_BSS;
 
 /* Uart */
@@ -64,13 +66,17 @@ static void clear_bss(void)
 	u64 bss_end_addr;
 	u64 i;
 
-	// [Step 4.2] 按链接脚本给出的物理边界逐字节清零正式内核 BSS，随后写 0 释放等待中的次核。
+	// [Step 4.2] 按链接脚本给出的物理边界逐字节清零正式内核 BSS，随后写 0 给flag 释放等待中的次核。
 	bss_start_addr = (u64)&_bss_start;
 	bss_end_addr = (u64)&_bss_end;
 
 	for (i = bss_start_addr; i < bss_end_addr; ++i)
 		*(char *)i = 0;
-
+	
+	/*
+	次核在 start.S:21-36 的 wait_for_bss_clear 循环中
+	用 adr x0, clear_bss_flag / ldr x1, [x0] 读取该地址并 cmp x1, #0，非零则继续循环（轮询）。
+	*/
 	clear_bss_flag = 0;
 }
 
@@ -84,6 +90,21 @@ void init_c(void)
 	uart_send_string("boot: init_c\r\n");
 
 	// [Step 4.4] 进入 wakeup_other_cores，使 CPU1~3 从 start.S 开始执行并停在 SMP boot flag 上。
+
+	/*
+	为什么还要 wakeup_other_cores：在很多 SoC（如 Raspberry Pi）上，
+	次核在复位后实际上被固件停在等待事件（通常执行 wfe）或需要固件把次核的入口地址写到 mailbox 才会运行。
+	wakeup_other_cores() 把 TEXT_OFFSET 写入固件的入口槽（0xe0/0xe8/0xf0），
+	然后执行 SEV，让固件/硬件释放次核，让它们从我们的启动入口重回 start.S。
+	因为主核已经把 clear_bss_flag 置 0，次核一旦被释放就能通过第一个等待点。
+	*/
+
+	/*
+	第二个“等待/释放”（SMP 正式加入）：次核通过 wait_for_bss_clear 后会完成 EL1 切换和栈设置，
+	但随后在 wait_until_smp_enabled 上轮询 secondary_boot_flag（由内核在准备好 SMP 时写入）。
+	只有主核在内核早期完成更多初始化并显式放行（设置 secondary_boot_flag）后，
+	次核才真正进入 secondary_init_c 并加入 SMP。
+	*/
 	wakeup_other_cores();
 
 	// ========== 内核启动：Phase 5: 构造启动页表 (Step 5) ==========

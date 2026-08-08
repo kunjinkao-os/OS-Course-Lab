@@ -73,7 +73,19 @@ primary:
 	bl 	arm64_elX_to_el1
 
 	// ========== 内核启动：Phase 4: 建立临时栈并进入 C (Step 4) ==========
-	// [Step 4.1] EL1 返回后把 SP 指向 CPU0 的 4 KiB 低地址启动栈顶，再直接跳到 init_c。
+	// [Step 4.1] 返回到 EL1 后，把 SP（栈顶指针） 指向 CPU0 的 4 KiB 低地址启动栈顶，再直接跳到 init_c。
+	/*
+	- “低地址”：这块内存被链接脚本（Linker Script）强制放在物理内存的低端区域（比如 0x0000_0000 附近）。
+
+	- “栈顶”：ARM 栈是满递减（Full Descending）的，即压栈时 SP 地址减小。假设这块 4KiB 内存范围是 0xA000_0000 到 0xA000_0FFF，
+		那么 SP 必须指向最高地址 0xA000_0FFF（栈顶），这样压第一个数据时，SP 先减 4 变成 0xA000_0FFC，恰好落在区间内。
+		
+	- 为什么要强调“低地址”？ 
+		因为在 MMU（内存管理单元）尚未开启时，CPU 跑的是物理地址。低地址区域通常被 SoC（片上系统）厂商映射为内部 SRAM 或共享内存，访问速度极快且绝对可靠。
+	
+	 */
+
+
 	adr 	x0, boot_cpu_stack
 	add 	x0, x0, #INIT_STACK_SIZE
 	mov 	sp, x0
