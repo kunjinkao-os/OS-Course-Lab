@@ -43,7 +43,7 @@ struct object_slot {
 
 struct slot_table {
 	unsigned int slots_size;
-	struct object_slot **slots;
+	struct object_slot **slots; //这里看作指针数组，slots[i] 指向一个object_slot
 	/*
 	 * if a bit in full_slots_bmp is 1, corresponding
 	 * sizeof(unsigned long) bits in slots_bmp are all set

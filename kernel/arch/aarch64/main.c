@@ -49,6 +49,7 @@ void init_fpu_owner_locks(void);
 // [Step 8.1] 此时 CPU0 已处于 AArch64 EL1，MMU/I-cache/D-cache 已开启，并使用 TTBR1 高半区页表和正式栈。
 // AArch64 不存在 x86 的实模式→保护模式→长模式，也不使用 GDT/IDT；异常向量由稍后的 VBAR_EL1 设置。
 // boot_flag 用于放行 CPU1~3；info 仅在 Raspi4 表示板卡版本，Raspi3 会忽略它。启动主线在此完成。
+// 在head.S 中正式调用
 void main(paddr_t boot_flag, void *info)
 {
 	u32 ret = 0;
@@ -73,9 +74,11 @@ void main(paddr_t boot_flag, void *info)
 	/* Init mm */
 	mm_init(info);
 
+
 	kinfo("[ChCore] mm init finished\n");
 
 	/* Mapping KSTACK into kernel page table. */
+	// 为每个cpu内核栈的地址区域初始化页表映射
 	map_range_in_pgtbl_kernel((void*)((unsigned long)boot_ttbr1_l0 + KBASE), 
 			KSTACKx_ADDR(0),
 			(unsigned long)(cpu_stacks[0]) - KBASE, 

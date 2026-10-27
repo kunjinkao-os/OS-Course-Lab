@@ -40,6 +40,7 @@ BEGIN_FUNC(start_kernel)
     bl flush_tlb_all
 
     /* Restore x0 and x1 */
+    //main的两个参数
     ldp x0, x1, [sp], #16
 
     // [Step 7.4] 恢复参数后调用内核 main；按执行时序转到 main.c 的 Phase 8。

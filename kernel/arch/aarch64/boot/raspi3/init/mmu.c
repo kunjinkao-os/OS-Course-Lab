@@ -82,7 +82,12 @@ void init_kernel_pt(void)
 	boot_ttbr0_l2[GET_L2_INDEX(vaddr)] = ((u64)boot_ttbr0_l3) | IS_TABLE
                                              | IS_VALID | NG;
 
-	/* first 2M, including .init section */
+        /* first 2M, including .init section */
+        /*
+         * 首次 2 MiB 范围的映射，使用 L3 级别的 4 KiB 页粒度进行映射。
+         * 目的是对 init 段（和启动栈）做更精细的权限控制（只读/可写），
+         * 而不是用 2 MiB 的大块映射覆盖掉这些需要细粒度保护的页面。
+         */
         for (; vaddr < SIZE_2M; vaddr += SIZE_4K) {
                 boot_ttbr0_l3[GET_L3_INDEX(vaddr)] =
                         (vaddr)
@@ -96,10 +101,9 @@ void init_kernel_pt(void)
                         | IS_VALID;
                 
                 /*
-                 * Code in init section(img_start~init_end) should be mmaped as
-                 * RDONLY_S due to WXN
-                 * The boot_cpu_stack is also in the init section, but should 
-                 * have write permission
+                 * init 段（img_start~init_end）中的代码由于 WXN 要映射为只读。
+                 * 注意：boot_cpu_stack 也位于 init 段，但启动栈需要写权限，
+                 * 因此对启动栈所在页做例外处理，保留写权限。
                  */
                 if (vaddr >= (u64)(&img_start) && vaddr < (u64)(&init_end) && 
                         (vaddr < (u64)boot_cpu_stack || vaddr >= ((u64)boot_cpu_stack) + PLAT_CPU_NUMBER * INIT_STACK_SIZE)) {
@@ -110,6 +114,11 @@ void init_kernel_pt(void)
 
         /* Normal memory: PHYSMEM_START ~ PERIPHERAL_BASE */
         /* Map with 2M granularity */
+        /*
+         * 对于低地址的普通内存区域，使用 L2 条目以 2 MiB 为单位做恒等映射（va = pa），
+         * 这样可以减少页表占用并提高 TLB 命中率。此处仍然把条目标记为非全局（nG），
+         * 因为这是给刚启用 MMU 的临时 TTBR0 使用的映射。
+         */
         for (; vaddr < PERIPHERAL_BASE; vaddr += SIZE_2M) {
                 boot_ttbr0_l2[GET_L2_INDEX(vaddr)] =
                         (vaddr) /* low mem, va = pa */
@@ -123,6 +132,10 @@ void init_kernel_pt(void)
 
         /* Peripheral memory: PERIPHERAL_BASE ~ PHYSMEM_END */
         /* Map with 2M granularity */
+        /*
+         * 外设区使用 Device memory 属性并以 2 MiB 粒度映射，确保访问不会被缓存
+         *（或使用 device 类型的内存属性），以满足 MMIO 语义。
+         */
         for (vaddr = PERIPHERAL_BASE; vaddr < PHYSMEM_END; vaddr += SIZE_2M) {
                 boot_ttbr0_l2[GET_L2_INDEX(vaddr)] =
                         (vaddr) /* low mem, va = pa */
@@ -133,7 +146,7 @@ void init_kernel_pt(void)
                         | IS_VALID;
         }
 
-        // [Step 5.3] 构造 TTBR1：把物理 0~1 GiB 映射到 KERNEL_VADDR 起的高半区；前 2 MiB 用 L3 页，
+        // [Step 5.3] 构造 TTBR1（内核页表地址空间）：把物理 0~1 GiB 映射到 KERNEL_VADDR 起的高半区；前 2 MiB 用 L3 页，
         // 其中正式 .text 设置为 EL1 只读可执行，其余页可写不可执行；后续普通内存和设备区用 2 MiB 块映射。
         // 高半区项不置 nG，作为所有地址空间共享的全局内核映射。
         /* LAB 1 TODO 5 BEGIN */

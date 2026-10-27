@@ -97,6 +97,7 @@ void init_c(void)
 
 	/* Call Kernel Main. */
 	uart_send_string("[BOOT] Jump to kernel main\r\n");
+	//作为 main函数的两个参数传入
 	start_kernel(secondary_boot_flag, board_revision);
 
 	/* Never reach here */
