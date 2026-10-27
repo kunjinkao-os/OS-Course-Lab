@@ -2,14 +2,13 @@
   "name": "ChCore-Dev",
   "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/${localWorkspaceFolderBasename},type=bind",
   "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
-  "image": "docker.io/kunjinkao512/chcore-dev:2026-08-07-arm64",
   "remoteUser": "stu",
   "updateRemoteUserUID": true,
   "runArgs": [
     "--hostname",
     "Chcore",
     "--platform",
-    "linux/arm64",
+    "linux/amd64",
     "--cap-add=SYS_PTRACE",
     "--security-opt=seccomp=unconfined"
   ],
@@ -28,5 +27,9 @@
         "terminal.integrated.defaultProfile.linux": "bash"
       }
     }
+  },
+  "build": {
+    "dockerfile": "Dockerfile.school-server",
+    "context": "."
   }
 }
