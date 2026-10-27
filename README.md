@@ -59,6 +59,8 @@ make qemu
 
 `make` 会在缺少 `.config` 时自动生成 Raspi3 默认配置，然后构建完整系统。`make qemu` 会先进行增量构建，再使用 QEMU 启动 ChCore。
 
+libc 构建会在 `build/user/chcore-libc/musl-libc/` 中复制 musl 源码、应用移植补丁并生成编译产物。该目录由 `.gitignore` 忽略，仓库中跟踪的 musl 源码保持原样。克隆后无需设置本地 Git 忽略标记；开发时修改 `user/system-services/chcore-libc/musl-libc/` 或 `libchcore/porting/` 中的文件，随后重新执行 CMake 配置，使修改进入构建目录。
+
 QEMU 使用无图形串口模式运行。按 `Ctrl-a x` 可以退出。
 
 ### 直接从宿主机运行

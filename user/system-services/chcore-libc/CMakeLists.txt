@@ -70,11 +70,23 @@ string(REPLACE ";" " " libc_defs "${libc_defs}")
 
 # Apply overrides and patches from libchcore
 
-set(_libc_target_dir ${CMAKE_CURRENT_SOURCE_DIR}/musl-libc)
+if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_CURRENT_BINARY_DIR)
+    message(FATAL_ERROR "Build libc in a separate build directory")
+endif()
+
+# Prepare a disposable source copy so porting never modifies tracked musl files.
+# Recreate it on configuration to include source edits and remove stale patches.
+set(_libc_target_dir ${CMAKE_CURRENT_BINARY_DIR}/musl-libc)
+file(REMOVE_RECURSE "${_libc_target_dir}")
+file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/musl-libc/"
+    DESTINATION "${_libc_target_dir}"
+    PATTERN "*.bak" EXCLUDE
+    PATTERN "obj" EXCLUDE
+    PATTERN "lib" EXCLUDE
+    PATTERN "config.mak" EXCLUDE)
 set(_libchcore_porting_dir ${CMAKE_CURRENT_SOURCE_DIR}/libchcore/porting)
 set(_libchcore_overrides_dir ${_libchcore_porting_dir}/overrides)
 set(_libchcore_patches_dir ${_libchcore_porting_dir}/patches)
-set(_libchcore_cleanup_script ${CMAKE_CURRENT_SOURCE_DIR}/libchcore/cmake/do_cleanup.sh)
 
 do_overrides(${_libchcore_overrides_dir} ${_libc_target_dir})
 do_patches(${_libchcore_patches_dir} ${_libc_target_dir})
@@ -106,5 +118,4 @@ add_custom_target(libc-install ALL
 
 # clean target
 add_custom_target(libc-clean
-    COMMAND make -C ${_libc_target_dir} clean
-    COMMAND bash ${_libchcore_cleanup_script} ${_libc_target_dir})
+    COMMAND make -C ${_libc_target_dir} clean)
